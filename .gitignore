@@ -1,0 +1,15 @@
+/aclocal.m4
+/ar-lib
+/autom4te.cache/
+/compile
+/configure
+/missing
+/install-sh
+/config.log
+/config.status
+/depcomp
+/.deps
+/cip-server
+*.[oa]
+Makefile
+Makefile.in
