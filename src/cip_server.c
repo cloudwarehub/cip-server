@@ -2,6 +2,18 @@
 #include <stdlib.h>
 #include <uv.h>
 
+#define ASSERT(expr)                                      \
+ do {                                                     \
+  if (!(expr)) {                                          \
+    fprintf(stderr,                                       \
+            "Assertion failed in %s on line %d: %s\n",    \
+            __FILE__,                                     \
+            __LINE__,                                     \
+            #expr);                                       \
+    abort();                                              \
+  }                                                       \
+ } while (0)
+
 typedef struct {
   uv_write_t req;
   uv_buf_t buf;
@@ -9,31 +21,60 @@ typedef struct {
     
 uv_loop_t *loop;
 
-uv_buf_t alloc_buffer(uv_handle_t *handle, size_t suggested_size) {
-    return uv_buf_init((char*) malloc(suggested_size), suggested_size);
+
+
+static void alloc_buffer(uv_handle_t* handle,
+                       size_t suggested_size,
+                       uv_buf_t* buf) {
+    buf->base = malloc(suggested_size);
+    buf->len = suggested_size;
 }
 
-void echo_write(uv_write_t *req, int status) {
-    if (status == -1) {
-        fprintf(stderr, "Write error %s\n", uv_err_name(uv_last_error(loop)));
-    }
-    char *base = (char*) req->data;
-    free(base);
+void after_write(uv_write_t *req, int status) {
+    write_req_t* wr;
+    wr = (write_req_t*) req;
+    free(wr->buf.base);
+    free(wr);
+    if (status == 0)
+    return;
+
+    fprintf(stderr,
+          "uv_write error: %s - %s\n",
+          uv_err_name(status),
+          uv_strerror(status));
+}
+
+static void on_close(uv_handle_t* peer) {
+    free(peer);
+}
+
+static void after_shutdown(uv_shutdown_t* req, int status) {
+    uv_close((uv_handle_t*) req->handle, on_close);
     free(req);
 }
     
-void echo_read(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
-    if (nread == -1) {
-        if (uv_last_error(loop).code != UV_EOF)
-            fprintf(stderr, "Read error %s\n", uv_err_name(uv_last_error(loop)));
-        uv_close((uv_handle_t*)client, NULL);
+void after_read(uv_stream_t *handle, ssize_t nread, uv_buf_t *buf) {
+    write_req_t *wr;
+    uv_shutdown_t* sreq;
+    if (nread < 0) {
+        /* Error or EOF */
+        ASSERT(nread == UV_EOF);
+        
+        free(buf->base);
+        sreq = malloc(sizeof* sreq);
+        ASSERT(0 == uv_shutdown(sreq, handle, after_shutdown));
         return;
     }
 
-    write_req_t *req = (write_req_t *) malloc(sizeof(write_req_t));
-    req->buf = uv_buf_init(buf.base, nread);
-    //req->data = (void*) buf.base;
-    uv_write(req, client, &req->buf, 1, echo_write);
+    if (nread == 0) {
+        /* Everything OK, but nothing read. */
+        free(buf->base);
+        return;
+    }
+    wr = (write_req_t*) malloc(sizeof *wr);
+    wr->buf = uv_buf_init(buf->base, nread);
+    uv_write(&wr->req, handle, &wr->buf, 1, after_write);
+    
 }
 
 
@@ -45,9 +86,10 @@ void connection_cb(uv_stream_t *server, int status) {
     }
 
     uv_tcp_t *client = (uv_tcp_t*) malloc(sizeof(uv_tcp_t));
-    uv_tcp_init(server->loop, client);
+    uv_tcp_init(loop, client);
+    client->data = server;
     if (uv_accept(server, (uv_stream_t*) client) == 0) {
-        uv_read_start((uv_stream_t*)client, alloc_buffer, echo_read);
+        uv_read_start((uv_stream_t*)client, alloc_buffer, after_read);
     }
     else {
         uv_close((uv_handle_t*)client, NULL);
@@ -58,13 +100,18 @@ int main()
 {
     uv_tcp_t tcp_server;
     struct sockaddr_in addr;
+    int r;
     
     loop = uv_default_loop();
-    addr = uv_ip4_addr("0.0.0.0", 5999);
+    uv_ip4_addr("0.0.0.0", 5999, &addr);
     
     uv_tcp_init(loop, &tcp_server);
     
-    uv_tcp_bind(&tcp_server, addr);
+    r = uv_tcp_bind(&tcp_server, (const struct sockaddr*)&addr, 0);
+    if (r) {
+        fprintf(stderr, "Bind error\n");
+        return 1;
+    }
     
     uv_listen((uv_stream_t*)&tcp_server, 128, connection_cb);
     
