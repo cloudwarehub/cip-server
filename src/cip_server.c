@@ -1,18 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uv.h>
+#include "common.h"
+#include "cip_protocol.h"
 
-#define ASSERT(expr)                                      \
- do {                                                     \
-  if (!(expr)) {                                          \
-    fprintf(stderr,                                       \
-            "Assertion failed in %s on line %d: %s\n",    \
-            __FILE__,                                     \
-            __LINE__,                                     \
-            #expr);                                       \
-    abort();                                              \
-  }                                                       \
- } while (0)
 
 typedef struct {
   uv_write_t req;
@@ -20,8 +11,6 @@ typedef struct {
 } write_req_t;
     
 uv_loop_t *loop;
-
-
 
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
