@@ -103,12 +103,11 @@ int main()
     int r;
     
     loop = uv_default_loop();
-    (r = uv_ip4_addr("127.0.0.1", 5996, &addr));
-    printf("%d\n", r);
-    // if (r) {
-    //     fprintf(stderr, "error\n");
-    //     return 1;
-    // }
+    r = uv_ip4_addr("0.0.0.0", 5999, &addr);
+    if (r) {
+        fprintf(stderr, "convert addr error\n");
+        return 1;
+    }
     
     r = uv_tcp_init(loop, &tcp_server);
     if (r) {
