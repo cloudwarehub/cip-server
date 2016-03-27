@@ -53,7 +53,7 @@ static void after_shutdown(uv_shutdown_t* req, int status) {
     free(req);
 }
     
-void after_read(uv_stream_t *handle, ssize_t nread, uv_buf_t *buf) {
+static void after_read(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
     write_req_t *wr;
     uv_shutdown_t* sreq;
     if (nread < 0) {
@@ -103,9 +103,18 @@ int main()
     int r;
     
     loop = uv_default_loop();
-    uv_ip4_addr("0.0.0.0", 5999, &addr);
+    (r = uv_ip4_addr("127.0.0.1", 5996, &addr));
+    printf("%d\n", r);
+    // if (r) {
+    //     fprintf(stderr, "error\n");
+    //     return 1;
+    // }
     
-    uv_tcp_init(loop, &tcp_server);
+    r = uv_tcp_init(loop, &tcp_server);
+    if (r) {
+        fprintf(stderr, "Socket creation error\n");
+        return 1;
+    }
     
     r = uv_tcp_bind(&tcp_server, (const struct sockaddr*)&addr, 0);
     if (r) {
