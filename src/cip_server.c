@@ -3,7 +3,7 @@
 #include <uv.h>
 #include "common.h"
 #include "cip_protocol.h"
-
+#include "cip_channel.h"
 
 typedef struct {
   uv_write_t req;
@@ -24,13 +24,12 @@ void after_write(uv_write_t *req, int status) {
     wr = (write_req_t*) req;
     free(wr->buf.base);
     free(wr);
-    if (status == 0)
-    return;
-
-    fprintf(stderr,
-          "uv_write error: %s - %s\n",
-          uv_err_name(status),
-          uv_strerror(status));
+    if (status != 0) {
+        fprintf(stderr,
+              "uv_write error: %s - %s\n",
+              uv_err_name(status),
+              uv_strerror(status));
+    }
 }
 
 static void on_close(uv_handle_t* peer) {
@@ -42,8 +41,8 @@ static void after_shutdown(uv_shutdown_t* req, int status) {
     free(req);
 }
     
-static void after_read(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
-    write_req_t *wr;
+static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
+    //write_req_t *wr;
     uv_shutdown_t* sreq;
     if (nread < 0) {
         /* Error or EOF */
@@ -51,7 +50,7 @@ static void after_read(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) 
         
         free(buf->base);
         sreq = malloc(sizeof* sreq);
-        ASSERT(0 == uv_shutdown(sreq, handle, after_shutdown));
+        ASSERT(0 == uv_shutdown(sreq, client, after_shutdown));
         return;
     }
 
@@ -60,27 +59,41 @@ static void after_read(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) 
         free(buf->base);
         return;
     }
-    wr = (write_req_t*) malloc(sizeof *wr);
-    wr->buf = uv_buf_init(buf->base, nread);
-    uv_write(&wr->req, handle, &wr->buf, 1, after_write);
+    
+    /* get socket channel */
+    cip_channel_t *channel = (cip_channel_t*)client->data;
+    if (!channel->connected) { /* connect message */
+        if (nread < sizeof(cip_message_connect_t)) {
+            
+        }
+    }
+    
+    // wr = (write_req_t*) malloc(sizeof *wr);
+    // wr->buf = uv_buf_init(buf->base, nread);
+    // uv_write(&wr->req, client, &wr->buf, 1, after_write);
     
 }
 
 
 void connection_cb(uv_stream_t *server, int status) {
     printf("new conn\n");
-    if (status == -1) {
-        // error!
+    if (status != 0) {
+        fprintf(stderr, "Connect error %s\n", uv_err_name(status));
         return;
     }
 
     uv_tcp_t *client = (uv_tcp_t*) malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, client);
-    client->data = server;
-    if (uv_accept(server, (uv_stream_t*) client) == 0) {
+
+    if (uv_accept(server, (uv_stream_t*)client) == 0) {
+        /* create cip_channel_t and read connect msg from client */
+        cip_channel_t *cip_channel = (cip_channel_t*)malloc(sizeof(cip_channel_t));
+        cip_channel->connected = 0;
+        client->data = cip_channel;
+        
+        /* wait for connect msg, non block */
         uv_read_start((uv_stream_t*)client, alloc_buffer, after_read);
-    }
-    else {
+    } else {
         uv_close((uv_handle_t*)client, NULL);
     }
 }
