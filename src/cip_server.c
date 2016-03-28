@@ -1,9 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <uv.h>
+#include <unistd.h>
+#include "xcb/xcb.h"
+#include "xcb/composite.h"
+#include "xcb/damage.h"
+#include "uv.h"
 #include "common.h"
 #include "cip_protocol.h"
 #include "cip_channel.h"
+#include "cip_server.h"
+#include "cip_window.c"
+#include "list.h"
+
+char *cip_session_test = "cloudwarehub";
+xcb_connection_t *xconn;
+cip_context_t cip_context;
 
 typedef struct {
   uv_write_t req;
@@ -12,11 +23,24 @@ typedef struct {
     
 uv_loop_t *loop;
 
+int cip_check_version(uint8_t major, uint8_t minor)
+{
+    return 0;
+}
+
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
                        uv_buf_t* buf) {
-    buf->base = malloc(suggested_size);
-    buf->len = suggested_size;
+    cip_channel_t *channel = (cip_channel_t*)handle->data;
+    
+    /* if not connected, allocate cip_message_connect_t buf */
+    if (!channel->connected) {
+        buf->base = malloc(sizeof(cip_message_connect_t));
+        buf->len = sizeof(cip_message_connect_t);
+    } else {
+        buf->base = malloc(suggested_size);
+        buf->len = suggested_size;
+    }
 }
 
 void after_write(uv_write_t *req, int status) {
@@ -42,14 +66,13 @@ static void after_shutdown(uv_shutdown_t* req, int status) {
 }
     
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    //write_req_t *wr;
-    uv_shutdown_t* sreq;
+    printf("%d\n", nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
         
         free(buf->base);
-        sreq = malloc(sizeof* sreq);
+        uv_shutdown_t* sreq = malloc(sizeof* sreq);
         ASSERT(0 == uv_shutdown(sreq, client, after_shutdown));
         return;
     }
@@ -62,15 +85,47 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
     
     /* get socket channel */
     cip_channel_t *channel = (cip_channel_t*)client->data;
-    if (!channel->connected) { /* connect message */
-        if (nread < sizeof(cip_message_connect_t)) {
-            
+    write_req_t *wr;
+    cip_message_connect_reply_t *msg_conn_rpl;
+    if (!channel->connected) {
+        /* TODO: check nread size */
+        
+        cip_message_connect_t *msg_conn = (cip_message_connect_t*)buf->base;
+        switch (msg_conn->channel_type) {
+            case CIP_CHANNEL_MASTER:
+                printf("master channel\n");
+                cip_check_version(msg_conn->version.major_version, msg_conn->version.minor_version);
+                free(buf->base);
+                
+                /* write connect result back */
+                wr = (write_req_t*) malloc(sizeof(write_req_t));
+                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
+                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
+                uv_write(&wr->req, client, &wr->buf, 1, after_write);
+                channel->connected = 1;
+                channel->type = CIP_CHANNEL_MASTER;
+                break;
+                
+            case CIP_CHANNEL_EVENT:
+                printf("event channel\n");
+                free(buf->base);
+                
+                /* write connect result back */
+                wr = (write_req_t*) malloc(sizeof(write_req_t));
+                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
+                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
+                uv_write(&wr->req, client, &wr->buf, 1, after_write);
+                channel->connected = 1;
+                channel->type = CIP_CHANNEL_EVENT;
+                break;
+                
+            default:
+                break;
         }
+        
     }
-    
-    // wr = (write_req_t*) malloc(sizeof *wr);
-    // wr->buf = uv_buf_init(buf->base, nread);
-    // uv_write(&wr->req, client, &wr->buf, 1, after_write);
     
 }
 
@@ -98,8 +153,126 @@ void connection_cb(uv_stream_t *server, int status) {
     }
 }
 
+void *xorg_thread()
+{
+    xcb_screen_t *screen;
+    xcb_window_t root;
+    
+    const xcb_query_extension_reply_t *query_damage_reply = xcb_get_extension_data(xconn, &xcb_damage_id);
+    xcb_damage_query_version_reply(xconn, xcb_damage_query_version(xconn, 1, 1 ), 0);
+    
+    screen = xcb_setup_roots_iterator(xcb_get_setup(xconn)).data;
+    root = screen->root;
+    uint32_t mask[] = { XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY|XCB_EVENT_MASK_PROPERTY_CHANGE|XCB_EVENT_MASK_STRUCTURE_NOTIFY };
+    xcb_change_window_attributes(xconn, root, XCB_CW_EVENT_MASK, mask);
+    xcb_composite_redirect_subwindows(xconn, root, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
+    
+    xcb_generic_event_t *event;
+    while (event = xcb_wait_for_event (xconn)) {
+        printf("new event: %d\n", event->response_type);
+        switch (event->response_type & ~0x80) {
+            case XCB_CREATE_NOTIFY: {
+                xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
+                
+                /* create window context and init stream context */
+                cip_window_t *cip_window = malloc(sizeof(cip_window_t));
+                INIT_LIST_HEAD(&cip_window->list_node);
+                list_add(&cip_window->list_node, &cip_context.windows);
+                cip_window->wid = e->window;
+                cip_window->width = e->width;
+                cip_window->height = e->height;
+                cip_window_stream_init(cip_window);
+                
+                /* send event to client */
+                cip_event_window_create_t cewc;
+                cewc.type = CIP_EVENT_WINDOW_CREATE;
+                cewc.wid = e->window;
+                cewc.x = e->x;
+                cewc.y = e->y;
+                cewc.width = e->width;
+                cewc.height = e->height;
+                cewc.bare = e->override_redirect;
+                
+//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
+//                    write_emit(iter->channel_event_sock, (char*)&cewc, sizeof(cewc));
+//                }
+                break;
+            }
+            case XCB_DESTROY_NOTIFY:;
+                xcb_destroy_notify_event_t *dne = (xcb_destroy_notify_event_t*)event;
+                cip_event_window_destroy_t cewd;
+                cewd.type = CIP_EVENT_WINDOW_DESTROY;
+                cewd.wid = dne->window;
+                
+//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
+//                    write_emit(iter->channel_event_sock, (char*)&cewd, sizeof(cewd));
+//                }
+                break;
+            case XCB_MAP_NOTIFY:{
+                xcb_map_notify_event_t *e = (xcb_map_notify_event_t*)event;
+                usleep(500);
+                
+                // cip_window_t *wd;
+                // list_for_each_entry(wd, &cip_context.windows, list_node) {
+                //     if (wd->wid == e->window) {
+                //         cip_window_stream_init(wd);
+                //         break;
+                //     }
+                // }
+                /* create damage */
+                xcb_damage_damage_t damage = xcb_generate_id(xconn);
+                xcb_damage_create(xconn, damage, e->window, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
+                xcb_flush(xconn);
+                
+                cip_event_window_show_t cews;
+                cews.type = CIP_EVENT_WINDOW_SHOW;
+                cews.wid = e->window;
+                cews.bare = e->override_redirect;
+                
+//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
+//                    write_emit(iter->channel_event_sock, (char*)&cews, sizeof(cews));
+//                }
+                
+                break;
+            }
+            case XCB_UNMAP_NOTIFY:;
+                xcb_unmap_notify_event_t *umne = (xcb_unmap_notify_event_t*)event;
+                cip_event_window_hide_t cewh;
+                cewh.type = CIP_EVENT_WINDOW_HIDE;
+                cewh.wid = umne->window;
+                
+//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
+//                    write_emit(iter->channel_event_sock, (char*)&cewh, sizeof(cewh));
+//                }
+                break;
+            default:
+                if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
+                    xcb_damage_notify_event_t *damage_event = (xcb_damage_notify_event_t*)event;
+                    cip_window_frame_send(damage_event->drawable);
+                    xcb_damage_subtract(xconn, damage_event->damage, XCB_NONE, XCB_NONE);
+                }
+                break;
+        }
+    }
+    return NULL;
+}
+
+
 int main()
 {
+    INIT_LIST_HEAD(&cip_context.sessions);
+    INIT_LIST_HEAD(&cip_context.windows);
+    xconn = xcb_connect(NULL, NULL);
+    if (xcb_connection_has_error(xconn)) {
+        printf("cannot connect to xserver\n");
+        xcb_disconnect(xconn);
+        return -1;
+    }
+    printf("connected xorg\n");
+    cip_context.xconn = xconn;
+    pthread_t xthread;
+    pthread_create(&xthread, NULL, (void*)xorg_thread, NULL);
+    
     uv_tcp_t tcp_server;
     struct sockaddr_in addr;
     int r;
