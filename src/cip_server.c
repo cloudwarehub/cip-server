@@ -9,25 +9,25 @@
 #include "cip_protocol.h"
 #include "cip_channel.h"
 #include "cip_server.h"
-#include "cip_window.c"
+#include "cip_window.h"
+#include "cip_common.h"
 #include "list.h"
 
 char *cip_session_test = "cloudwarehub";
-xcb_connection_t *xconn;
 cip_context_t cip_context;
 
 typedef struct {
   uv_write_t req;
   uv_buf_t buf;
 } write_req_t;
+
+
+typedef struct {
+    list_head_t list_node;
+} write_req_node;
     
 uv_loop_t *loop;
 uv_async_t async;
-
-int cip_check_version(uint8_t major, uint8_t minor)
-{
-    return 0;
-}
 
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
@@ -67,7 +67,7 @@ static void after_shutdown(uv_shutdown_t* req, int status) {
 }
     
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    printf("%d\n", nread);
+    printf("read bytes: %d", nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
@@ -98,14 +98,23 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 cip_check_version(msg_conn->version.major_version, msg_conn->version.minor_version);
                 free(buf->base);
                 
+                channel->connected = 1;
+                channel->type = CIP_CHANNEL_MASTER;
+                
+                /* create new session and add to cip_context */
+                cip_session_t *cip_session = malloc(sizeof(cip_session_t));
+                cip_session->master_channel = channel;
+                /* generate random session string */
+                rand_string(cip_session->session, sizeof(cip_session->session));
+                list_add_tail(&cip_session->list_node, &cip_context.sessions);
+                printf("session: %s\n", cip_session->session);
+                
                 /* write connect result back */
                 wr = (write_req_t*) malloc(sizeof(write_req_t));
                 msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
                 msg_conn_rpl->result = CIP_RESULT_SUCCESS;
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
                 uv_write(&wr->req, client, &wr->buf, 1, after_write);
-                channel->connected = 1;
-                channel->type = CIP_CHANNEL_MASTER;
                 break;
                 
             case CIP_CHANNEL_EVENT:
@@ -126,6 +135,14 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 break;
         }
         
+    } else { /* channel already connected */
+        /* TODO: check nread size */
+        
+        if (channel->type == CIP_CHANNEL_MASTER) {
+            cip_message_t *msg = (cip_message_t*)buf->base;
+        } else if (channel->type == CIP_CHANNEL_EVENT) {
+            cip_event_t *m = (cip_event_t*)buf->base;
+        }
     }
     
 }
@@ -156,9 +173,11 @@ void connection_cb(uv_stream_t *server, int status) {
 
 void xorg_thread()
 {
+    xcb_connection_t *xconn;
     xcb_screen_t *screen;
     xcb_window_t root;
     
+    xconn = cip_context.xconn;
     const xcb_query_extension_reply_t *query_damage_reply = xcb_get_extension_data(xconn, &xcb_damage_id);
     xcb_damage_query_version_reply(xconn, xcb_damage_query_version(xconn, 1, 1 ), 0);
     
@@ -171,7 +190,6 @@ void xorg_thread()
     xcb_generic_event_t *event;
     while ((event = xcb_wait_for_event (xconn))) {
         printf("new event: %d\n", event->response_type);
-        uv_async_send(&async);
         switch (event->response_type & ~0x80) {
             case XCB_CREATE_NOTIFY: {
                 xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
@@ -266,23 +284,22 @@ void emit_write(uv_async_t *handle)
 
 void xorg_after(uv_work_t *req, int status) {
     fprintf(stderr, "xorg end\n");
+    free(async.data);
     uv_close((uv_handle_t*) &async, NULL);
 }
+
 
 int main()
 {
     INIT_LIST_HEAD(&cip_context.sessions);
     INIT_LIST_HEAD(&cip_context.windows);
-    xconn = xcb_connect(NULL, NULL);
-    if (xcb_connection_has_error(xconn)) {
+    cip_context.xconn = xcb_connect(NULL, NULL);
+    if (xcb_connection_has_error(cip_context.xconn)) {
         printf("cannot connect to xserver\n");
-        xcb_disconnect(xconn);
+        xcb_disconnect(cip_context.xconn);
         return 1;
     }
     printf("connected to xorg\n");
-    cip_context.xconn = xconn;
-//    pthread_t xthread;
-//    pthread_create(&xthread, NULL, (void*)xorg_thread, NULL);
     
     /* bellow is libuv routine */
     uv_tcp_t tcp_server;
@@ -293,9 +310,15 @@ int main()
     
     /* start xorg thread */
     uv_work_t req;
+    
+    /* async.data is a write request list */
+    list_head_t *write_list = malloc(sizeof(list_head_t));
+    INIT_LIST_HEAD(write_list);
+    req.data = write_list;
     uv_async_init(loop, &async, emit_write);
     uv_queue_work(loop, &req, xorg_thread, xorg_after);
     
+    /* start tcp server loop */
     r = uv_ip4_addr("0.0.0.0", 5999, &addr);
     if (r) {
         fprintf(stderr, "convert addr error\n");
@@ -314,7 +337,12 @@ int main()
         return 1;
     }
     
-    uv_listen((uv_stream_t*)&tcp_server, 128, connection_cb);
+    r = uv_listen((uv_stream_t*)&tcp_server, 128, connection_cb);
+    if (r) {
+        fprintf(stderr, "Listen error\n");
+        return 1;
+    }
+    
     
     uv_run(loop, UV_RUN_DEFAULT);
     

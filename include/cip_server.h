@@ -13,6 +13,9 @@
 #include <x264.h>
 #include <xcb/xcb.h>
 #include "list.h"
+#include "cip_channel.h"
+
+#define SESSION_LENGTH 128
 
 typedef struct {
     list_head_t sessions;
@@ -22,10 +25,10 @@ typedef struct {
 
 typedef struct {
     list_head_t list_node;
-    int channel_master_sock;
-    int channel_event_sock;
-    int channel_display_sock;
-    char session[37];
+    cip_channel_t *master_channel;
+    cip_channel_t *event_channel;
+    cip_channel_t *display_channel;
+    char session[SESSION_LENGTH];
 } cip_session_t;
 
 typedef struct {
