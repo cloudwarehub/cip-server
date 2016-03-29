@@ -179,7 +179,7 @@ void cip_window_frame_send(int wid)
             x264_picture_t picout;
             int i_frame_size;
             x264_nal_t *nal = NULL;
-            uint32_t i_nal = 0;
+            int32_t i_nal = 0;
             
             xcb_get_image_reply_t *img;
             img = xcb_get_image_reply(cip_context.xconn,

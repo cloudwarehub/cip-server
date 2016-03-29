@@ -22,6 +22,7 @@ typedef struct {
 } write_req_t;
     
 uv_loop_t *loop;
+uv_async_t async;
 
 int cip_check_version(uint8_t major, uint8_t minor)
 {
@@ -153,7 +154,7 @@ void connection_cb(uv_stream_t *server, int status) {
     }
 }
 
-void *xorg_thread()
+void xorg_thread()
 {
     xcb_screen_t *screen;
     xcb_window_t root;
@@ -168,8 +169,9 @@ void *xorg_thread()
     xcb_composite_redirect_subwindows(xconn, root, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
     
     xcb_generic_event_t *event;
-    while (event = xcb_wait_for_event (xconn)) {
+    while ((event = xcb_wait_for_event (xconn))) {
         printf("new event: %d\n", event->response_type);
+        uv_async_send(&async);
         switch (event->response_type & ~0x80) {
             case XCB_CREATE_NOTIFY: {
                 xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
@@ -254,9 +256,18 @@ void *xorg_thread()
                 break;
         }
     }
-    return NULL;
+    printf("xorg thread end\n");
 }
 
+void emit_write(uv_async_t *handle)
+{
+    printf("emit write\n");
+}
+
+void xorg_after(uv_work_t *req, int status) {
+    fprintf(stderr, "xorg end\n");
+    uv_close((uv_handle_t*) &async, NULL);
+}
 
 int main()
 {
@@ -266,18 +277,25 @@ int main()
     if (xcb_connection_has_error(xconn)) {
         printf("cannot connect to xserver\n");
         xcb_disconnect(xconn);
-        return -1;
+        return 1;
     }
-    printf("connected xorg\n");
+    printf("connected to xorg\n");
     cip_context.xconn = xconn;
-    pthread_t xthread;
-    pthread_create(&xthread, NULL, (void*)xorg_thread, NULL);
+//    pthread_t xthread;
+//    pthread_create(&xthread, NULL, (void*)xorg_thread, NULL);
     
+    /* bellow is libuv routine */
     uv_tcp_t tcp_server;
     struct sockaddr_in addr;
     int r;
     
     loop = uv_default_loop();
+    
+    /* start xorg thread */
+    uv_work_t req;
+    uv_async_init(loop, &async, emit_write);
+    uv_queue_work(loop, &req, xorg_thread, xorg_after);
+    
     r = uv_ip4_addr("0.0.0.0", 5999, &addr);
     if (r) {
         fprintf(stderr, "convert addr error\n");

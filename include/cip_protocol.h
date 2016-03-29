@@ -3,6 +3,8 @@
 
 #include "cip_defs.h"
 
+#define CIP_ATTR_PACKED __attribute__ ((__packed__))
+
 enum CIP_RESULT {
     CIP_RESULT_SUCCESS,
     CIP_RESULT_FAIL,
@@ -47,42 +49,43 @@ enum CIP_EVENT {
     CIP_EVENT_WINDOW_HIDE,
 };
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 type;
-    u8 bare;
-    u8 _pad[2];
     u32 wid;
     i16 x;
     i16 y;
     u16 width;
     u16 height;
+    u8 bare;
 } cip_event_window_create_t;
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 type;
-    u8 _pad[3];
     u32 wid;
-    u8 _pad1[8];
 } cip_event_window_destroy_t;
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 type;
-    u8 _pad[3];
     u32 wid;
-    u8 _pad1[8];
 } cip_event_window_hide_t;
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 type;
     u8 bare;
-    u8 _pad[2];
     u32 wid;
-    u8 _pad1[8];
 } cip_event_window_show_t;
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u32 wid;
     u32 length;
 } cip_event_window_frame_t;
+
+typedef union CIP_ATTR_PACKED {
+    u8 type;
+    cip_event_window_create_t window_create;
+    cip_event_window_destroy_t window_destroy;
+    cip_event_window_show_t window_show;
+    cip_event_window_hide_t window_hide;
+} cip_event_t;
 
 #endif
