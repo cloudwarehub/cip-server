@@ -11,5 +11,6 @@
 
 int cip_check_version(uint8_t major, uint8_t minor);
 char *rand_string(char *str, size_t size);
+int event_len(cip_event_t *event);
 
 #endif /* cip_common_h */

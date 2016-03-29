@@ -31,6 +31,12 @@ typedef struct {
     char session[SESSION_LENGTH];
 } cip_session_t;
 
+/* used for non session server, every channel has a dummy session */
+typedef struct {
+    list_head_t list_node;
+    cip_channel_t *channel;
+} cip_session_dummy_t;
+
 typedef struct {
     list_head_t list_node;
     int wid;
@@ -43,5 +49,10 @@ typedef struct {
     uint16_t even_width;
     uint16_t even_height;
 } cip_window_t;
+
+typedef struct {
+    list_head_t list_node;
+    cip_event_t event;
+} cip_event_node_t;
 
 #endif /* cip_server_h */

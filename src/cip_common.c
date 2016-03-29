@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "cip_protocol.h"
 #include "cip_common.h"
 
 int cip_check_version(uint8_t major, uint8_t minor)
@@ -31,4 +32,25 @@ char *rand_string(char *str, size_t size)
         str[size] = '\0';
     }
     return str;
+}
+
+int event_len(cip_event_t *event)
+{
+    switch (event->type) {
+        case CIP_EVENT_WINDOW_CREATE:
+            return sizeof(cip_event_window_create_t);
+            break;
+        case CIP_EVENT_WINDOW_DESTROY:
+            return sizeof(cip_event_window_destroy_t);
+            break;
+        case CIP_EVENT_WINDOW_SHOW:
+            return sizeof(cip_event_window_show_t);
+            break;
+        case CIP_EVENT_WINDOW_HIDE:
+            return sizeof(cip_event_window_hide_t);
+            break;
+        default:
+            break;
+    }
+    return 0;
 }

@@ -29,6 +29,8 @@ typedef struct {
 uv_loop_t *loop;
 uv_async_t async;
 
+int need_session = 0;
+
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
                        uv_buf_t* buf) {
@@ -65,9 +67,27 @@ static void after_shutdown(uv_shutdown_t* req, int status) {
     uv_close((uv_handle_t*) req->handle, on_close);
     free(req);
 }
+
+/* traverse cip sessions and find whose session match query */
+cip_session_t *find_session(char *session)
+{
+    cip_session_t *iter = NULL;
+    list_for_each_entry(iter, &cip_context.sessions, list_node) {
+        if (strcmp(iter->session, session)) {
+            return iter;
+        }
+    }
+    return iter;
+}
+
+/* recover window state to event channel */
+void recover_state(cip_channel_t *channel)
+{
+    // TODO
+}
     
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    printf("read bytes: %d", nread);
+    printf("read bytes: %d\n", nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
@@ -100,6 +120,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_MASTER;
+                channel->client = client;
                 
                 /* create new session and add to cip_context */
                 cip_session_t *cip_session = malloc(sizeof(cip_session_t));
@@ -124,11 +145,23 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 /* write connect result back */
                 wr = (write_req_t*) malloc(sizeof(write_req_t));
                 msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
-                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+                if (need_session) {
+                    msg_conn_rpl->result = CIP_RESULT_NEED_SESSION;
+                } else {
+                    msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+                    cip_session_dummy_t *sess_dummy = malloc(sizeof(cip_session_dummy_t));
+                    sess_dummy->channel = channel;
+                    list_add_tail(&sess_dummy->list_node, &cip_context.sessions);
+                }
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
                 uv_write(&wr->req, client, &wr->buf, 1, after_write);
+                
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_EVENT;
+                channel->client = client;
+                
+                /* recover window state on channel established */
+                recover_state(channel);
                 break;
                 
             default:
@@ -176,6 +209,7 @@ void xorg_thread()
     xcb_connection_t *xconn;
     xcb_screen_t *screen;
     xcb_window_t root;
+    list_head_t *event_list = async.data;
     
     xconn = cip_context.xconn;
     const xcb_query_extension_reply_t *query_damage_reply = xcb_get_extension_data(xconn, &xcb_damage_id);
@@ -203,19 +237,20 @@ void xorg_thread()
                 cip_window->height = e->height;
                 cip_window_stream_init(cip_window);
                 
-                /* send event to client */
-                cip_event_window_create_t cewc;
-                cewc.type = CIP_EVENT_WINDOW_CREATE;
-                cewc.wid = e->window;
-                cewc.x = e->x;
-                cewc.y = e->y;
-                cewc.width = e->width;
-                cewc.height = e->height;
-                cewc.bare = e->override_redirect;
+                /* add event to send list */
+                cip_event_node_t *evt = malloc(sizeof(cip_event_node_t));
+                cip_event_window_create_t *cewc = &evt->event.window_create;
+                cewc->type = CIP_EVENT_WINDOW_CREATE;
+                cewc->wid = e->window;
+                cewc->x = e->x;
+                cewc->y = e->y;
+                cewc->width = e->width;
+                cewc->height = e->height;
+                cewc->bare = e->override_redirect;
+                list_add_tail(event_list, &evt->list_node);
                 
-//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
-//                    write_emit(iter->channel_event_sock, (char*)&cewc, sizeof(cewc));
-//                }
+                /* inform uv thread send it */
+                uv_async_send(&async);
                 break;
             }
             case XCB_DESTROY_NOTIFY:;
@@ -279,7 +314,21 @@ void xorg_thread()
 
 void emit_write(uv_async_t *handle)
 {
-    printf("emit write\n");
+    list_head_t *event_list = async.data;
+    int len;
+    while (!list_empty(event_list)) {
+        cip_event_node_t *event = list_entry(event_list->next, cip_event_node_t, list_node);
+        list_del(&event->list_node);
+        cip_session_t *sess;
+        list_for_each_entry(sess, &cip_context.sessions, list_node) {
+            if (sess->event_channel) {
+                write_req_t *wr = malloc(sizeof(write_req_t));
+                len = event_len(&event->event);
+                wr->buf = uv_buf_init((char*)&event->event, len);
+                uv_write(&wr->req, sess->event_channel->client, &wr->buf, 1, after_write);
+            }
+        }
+    }
 }
 
 void xorg_after(uv_work_t *req, int status) {
