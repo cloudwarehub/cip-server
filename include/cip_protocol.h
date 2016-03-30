@@ -4,6 +4,7 @@
 #include "cip_defs.h"
 
 #define CIP_ATTR_PACKED __attribute__ ((__packed__))
+#define CIP_SESSION_LENGTH 128
 
 enum CIP_RESULT {
     CIP_RESULT_SUCCESS,

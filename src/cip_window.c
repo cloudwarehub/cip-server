@@ -220,7 +220,7 @@ void cip_window_frame_send(int wid)
                 p->length = nal[i].i_payload;
                 memcpy(buf + sizeof(cip_event_window_frame_t), nal[i].p_payload, nal[i].i_payload);
                 
-                cip_session_t *iter;
+                //cip_session_t *iter;
 //                list_for_each_entry(iter, &cip_context.sessions, list_node) {
 //                    write_emit(iter->channel_display_sock, buf, length);
 //                }

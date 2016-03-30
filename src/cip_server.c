@@ -5,26 +5,17 @@
 #include "xcb/composite.h"
 #include "xcb/damage.h"
 #include "uv.h"
+#include "list.h"
 #include "common.h"
 #include "cip_protocol.h"
 #include "cip_channel.h"
 #include "cip_server.h"
 #include "cip_window.h"
 #include "cip_common.h"
-#include "list.h"
+#include "cip_session.h"
 
 char *cip_session_test = "cloudwarehub";
 cip_context_t cip_context;
-
-typedef struct {
-  uv_write_t req;
-  uv_buf_t buf;
-} write_req_t;
-
-
-typedef struct {
-    list_head_t list_node;
-} write_req_node;
     
 uv_loop_t *loop;
 uv_async_t async;
@@ -124,6 +115,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 
                 /* create new session and add to cip_context */
                 cip_session_t *cip_session = malloc(sizeof(cip_session_t));
+                cip_session_init(cip_session);
                 cip_session->master_channel = channel;
                 /* generate random session string */
                 rand_string(cip_session->session, sizeof(cip_session->session));
@@ -221,6 +213,7 @@ void xorg_thread()
     xcb_change_window_attributes(xconn, root, XCB_CW_EVENT_MASK, mask);
     xcb_composite_redirect_subwindows(xconn, root, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
     
+    write_req_t *wr;
     xcb_generic_event_t *event;
     while ((event = xcb_wait_for_event (xconn))) {
         printf("new event: %d\n", event->response_type);
@@ -238,8 +231,7 @@ void xorg_thread()
                 cip_window_stream_init(cip_window);
                 
                 /* add event to send list */
-                cip_event_node_t *evt = malloc(sizeof(cip_event_node_t));
-                cip_event_window_create_t *cewc = &evt->event.window_create;
+                cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
                 cewc->type = CIP_EVENT_WINDOW_CREATE;
                 cewc->wid = e->window;
                 cewc->x = e->x;
@@ -247,7 +239,10 @@ void xorg_thread()
                 cewc->width = e->width;
                 cewc->height = e->height;
                 cewc->bare = e->override_redirect;
-                list_add_tail(event_list, &evt->list_node);
+                wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
+                wr->channel_type = CIP_CHANNEL_EVENT;
+                list_add_tail(event_list, &wr->list_node);
                 
                 /* inform uv thread send it */
                 uv_async_send(&async);
@@ -315,17 +310,19 @@ void xorg_thread()
 void emit_write(uv_async_t *handle)
 {
     list_head_t *event_list = async.data;
-    int len;
     while (!list_empty(event_list)) {
-        cip_event_node_t *event = list_entry(event_list->next, cip_event_node_t, list_node);
-        list_del(&event->list_node);
+        write_req_t *wr = list_entry(event_list->next, write_req_t, list_node);
+        list_del(&wr->list_node);
         cip_session_t *sess;
         list_for_each_entry(sess, &cip_context.sessions, list_node) {
-            if (sess->event_channel) {
-                write_req_t *wr = malloc(sizeof(write_req_t));
-                len = event_len(&event->event);
-                wr->buf = uv_buf_init((char*)&event->event, len);
+            if (wr->channel_type == CIP_CHANNEL_EVENT && sess->event_channel) {
                 uv_write(&wr->req, sess->event_channel->client, &wr->buf, 1, after_write);
+            }
+            if (wr->channel_type == CIP_CHANNEL_MASTER && sess->master_channel) {
+                uv_write(&wr->req, sess->master_channel->client, &wr->buf, 1, after_write);
+            }
+            if (wr->channel_type == CIP_CHANNEL_DISPLAY && sess->display_channel) {
+                uv_write(&wr->req, sess->display_channel->client, &wr->buf, 1, after_write);
             }
         }
     }
