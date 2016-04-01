@@ -93,6 +93,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
 
     if (nread == 0) {
         /* Everything OK, but nothing read. */
+        printf("%p\n", buf->base);
         free(buf->base);
         return;
     }
