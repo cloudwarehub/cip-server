@@ -34,6 +34,7 @@ static void alloc_buffer(uv_handle_t* handle,
         buf->len = sizeof(cip_message_connect_t);
     } else {
         buf->base = malloc(suggested_size);
+        printf("%p\n", buf->base);
         buf->len = suggested_size;
     }
 }
