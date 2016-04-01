@@ -78,7 +78,7 @@ void recover_state(cip_channel_t *channel)
 }
     
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    printf("read bytes: %d\n", nread);
+    printf("read bytes: %d\n", (int)nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
@@ -253,6 +253,15 @@ void xorg_thread()
                 cip_event_window_destroy_t cewd;
                 cewd.type = CIP_EVENT_WINDOW_DESTROY;
                 cewd.wid = dne->window;
+                /* delete stream context */
+                cip_window_t *cip_window;
+                list_for_each_entry(cip_window, &cip_context.windows, list_node) {
+                    if (cip_window->wid == dne->window) {
+                        list_del(&cip_window->list_node);
+                        free(cip_window);
+                        break;
+                    }
+                }
                 
 //                list_for_each_entry(iter, &cip_context.sessions, list_node) {
 //                    write_emit(iter->channel_event_sock, (char*)&cewd, sizeof(cewd));
