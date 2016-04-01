@@ -25,6 +25,7 @@ int need_session = 0;
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
                        uv_buf_t* buf) {
+    printf("alloc\n");
     cip_channel_t *channel = (cip_channel_t*)handle->data;
     
     /* if not connected, allocate cip_message_connect_t buf */
