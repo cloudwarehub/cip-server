@@ -251,9 +251,7 @@ void xorg_thread()
             }
             case XCB_DESTROY_NOTIFY:;
                 xcb_destroy_notify_event_t *dne = (xcb_destroy_notify_event_t*)event;
-                cip_event_window_destroy_t cewd;
-                cewd.type = CIP_EVENT_WINDOW_DESTROY;
-                cewd.wid = dne->window;
+                
                 /* delete stream context */
                 cip_window_t *cip_window;
                 list_for_each_entry(cip_window, &cip_context.windows, list_node) {
@@ -264,9 +262,18 @@ void xorg_thread()
                     }
                 }
                 
-//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
-//                    write_emit(iter->channel_event_sock, (char*)&cewd, sizeof(cewd));
-//                }
+                
+                /* add event to send list */
+                cip_event_window_destroy_t *cewd = malloc(sizeof(cip_event_window_destroy_t));
+                cewd->type = CIP_EVENT_WINDOW_DESTROY;
+                cewd->wid = dne->window;
+                wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init((char*)cewd, sizeof(*cewd));
+                wr->channel_type = CIP_CHANNEL_MASTER;
+                list_add_tail(&wr->list_node, event_list);
+                
+                /* inform uv thread */
+                uv_async_send(&async);
                 break;
             case XCB_MAP_NOTIFY:{
                 xcb_map_notify_event_t *e = (xcb_map_notify_event_t*)event;
