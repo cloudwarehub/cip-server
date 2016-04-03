@@ -145,9 +145,10 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
                     msg_conn_rpl->result = CIP_RESULT_NEED_SESSION;
                 } else {
                     msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                    cip_session_dummy_t *sess_dummy = malloc(sizeof(cip_session_dummy_t));
-                    sess_dummy->channel = channel;
-                    list_add_tail(&sess_dummy->list_node, &cip_context.sessions);
+                    cip_session_t *cip_session = malloc(sizeof(cip_session_t));
+                    cip_session_init(cip_session);
+                    cip_session->event_channel = channel;
+                    list_add_tail(&cip_session->list_node, &cip_context.sessions);
                 }
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
                 uv_write(&wr->req, client, &wr->buf, 1, after_write);
