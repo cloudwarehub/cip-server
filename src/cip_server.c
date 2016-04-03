@@ -243,7 +243,7 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
                 wr->channel_type = CIP_CHANNEL_EVENT;
-                list_add_tail(event_list, &wr->list_node);
+                list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread send it */
                 uv_async_send(&async);
