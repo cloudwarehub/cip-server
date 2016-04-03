@@ -28,6 +28,11 @@ static void alloc_buffer(uv_handle_t* handle,
     printf("alloc\n");
     cip_channel_t *channel = (cip_channel_t*)handle->data;
     
+    buf->base = malloc(suggested_size);
+    printf("%p\n", buf->base);
+    buf->len = suggested_size;
+    return;
+    
     /* if not connected, allocate cip_message_connect_t buf */
     if (!channel->connected) {
         buf->base = malloc(sizeof(cip_message_connect_t));
@@ -110,7 +115,6 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
             case CIP_CHANNEL_MASTER:
                 printf("master channel\n");
                 cip_check_version(msg_conn->version.major_version, msg_conn->version.minor_version);
-                free(buf->base);
                 
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_MASTER;
@@ -135,7 +139,6 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 
             case CIP_CHANNEL_EVENT:
                 printf("event channel\n");
-                free(buf->base);
                 
                 /* write connect result back */
                 wr = (write_req_t*) malloc(sizeof(write_req_t));
@@ -173,6 +176,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
         }
     }
     
+    free(buf->base);
 }
 
 
