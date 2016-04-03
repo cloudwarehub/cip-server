@@ -21,6 +21,8 @@ AC_CHECK_LIB(x264, x264_encoder_encode,
     [AC_MSG_ERROR([x264 libraries not found.])]
 )
 
+AC_CHECK_LIB([xcb],[],AC_MSG_ERROR([ *** Unable to find X11-xcb library]))
+
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
