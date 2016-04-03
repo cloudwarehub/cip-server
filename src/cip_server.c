@@ -88,7 +88,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
     printf("read bytes: %d\n", (int)nread);
     printf("bufbase:%p\n", buf->base);
     free(buf->base);
-    return;
+
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
@@ -133,11 +133,11 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 printf("session: %s\n", cip_session->session);
                 
                 /* write connect result back */
-                wr = (write_req_t*) malloc(sizeof(write_req_t));
-                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
-                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
-                uv_write(&wr->req, client, &wr->buf, 1, after_write);
+//                wr = (write_req_t*) malloc(sizeof(write_req_t));
+//                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
+//                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+//                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
+//                uv_write(&wr->req, client, &wr->buf, 1, after_write);
                 break;
                 
             case CIP_CHANNEL_EVENT:
