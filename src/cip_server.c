@@ -242,7 +242,7 @@ void xorg_thread()
                 cewc->bare = e->override_redirect;
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
-                wr->channel_type = CIP_CHANNEL_EVENT;
+                wr->channel_type = CIP_CHANNEL_MASTER;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread send it */
