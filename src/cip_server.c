@@ -368,6 +368,7 @@ int main()
     uv_work_t req;
     
     /* async.data is a write request list */
+    async.data = malloc(sizeof(list_head_t));
     list_head_t *write_list = malloc(sizeof(list_head_t));
     INIT_LIST_HEAD(write_list);
     req.data = write_list;
