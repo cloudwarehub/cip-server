@@ -43,9 +43,10 @@ typedef struct {
 
 
 typedef struct {
+    uv_write_t req;
     list_head_t list_node;
     enum CIP_CHANNEL channel_type;
-    uv_write_t req;
+
     uv_buf_t buf;
 } write_req_t;
 

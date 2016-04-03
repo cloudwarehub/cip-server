@@ -136,7 +136,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
                 msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
                 msg_conn_rpl->result = CIP_RESULT_SUCCESS;
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
-//                uv_write(&wr->req, client, &wr->buf, 1, after_write);
+                uv_write(&wr->req, client, &wr->buf, 1, after_write);
                 break;
                 
             case CIP_CHANNEL_EVENT:
