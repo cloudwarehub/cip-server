@@ -87,6 +87,8 @@ void recover_state(cip_channel_t *channel)
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
     printf("read bytes: %d\n", (int)nread);
     printf("bufbase:%p\n", buf->base);
+    free(buf->base);
+    return;
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
