@@ -11,6 +11,15 @@ AM_INIT_AUTOMAKE
 AC_PROG_CC
 
 # Checks for libraries.
+AC_CHECK_LIB(uv, uv_run,
+    [],
+    [AC_MSG_ERROR([libuv libraries not found.])]
+)
+
+AC_CHECK_LIB(x264, x264_encoder_encode,
+    [],
+    [AC_MSG_ERROR([x264 libraries not found.])]
+)
 
 # Checks for header files.
 
