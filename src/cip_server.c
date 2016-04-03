@@ -247,7 +247,7 @@ void xorg_thread()
                 cewc->bare = e->override_redirect;
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
-                wr->channel_type = CIP_CHANNEL_MASTER;
+                wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread send it */
@@ -267,14 +267,13 @@ void xorg_thread()
                     }
                 }
                 
-                
                 /* add event to send list */
                 cip_event_window_destroy_t *cewd = malloc(sizeof(cip_event_window_destroy_t));
                 cewd->type = CIP_EVENT_WINDOW_DESTROY;
                 cewd->wid = dne->window;
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewd, sizeof(*cewd));
-                wr->channel_type = CIP_CHANNEL_MASTER;
+                wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread */
@@ -288,8 +287,6 @@ void xorg_thread()
                 xcb_damage_create(xconn, damage, e->window, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
                 xcb_flush(xconn);
                 
-                
-                
                 /* add event to send list */
                 cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
                 cews->type = CIP_EVENT_WINDOW_SHOW;
@@ -298,7 +295,7 @@ void xorg_thread()
                 cews->bare = e->override_redirect;
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
-                wr->channel_type = CIP_CHANNEL_MASTER;
+                wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread */
@@ -315,7 +312,7 @@ void xorg_thread()
                 cewh->wid = umne->window;
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewh, sizeof(*cewh));
-                wr->channel_type = CIP_CHANNEL_MASTER;
+                wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread */
