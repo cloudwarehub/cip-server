@@ -277,40 +277,44 @@ void xorg_thread()
                 break;
             case XCB_MAP_NOTIFY:{
                 xcb_map_notify_event_t *e = (xcb_map_notify_event_t*)event;
-                usleep(500);
                 
-                // cip_window_t *wd;
-                // list_for_each_entry(wd, &cip_context.windows, list_node) {
-                //     if (wd->wid == e->window) {
-                //         cip_window_stream_init(wd);
-                //         break;
-                //     }
-                // }
                 /* create damage */
                 xcb_damage_damage_t damage = xcb_generate_id(xconn);
                 xcb_damage_create(xconn, damage, e->window, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
                 xcb_flush(xconn);
                 
-                cip_event_window_show_t cews;
-                cews.type = CIP_EVENT_WINDOW_SHOW;
-                cews.wid = e->window;
-                cews.bare = e->override_redirect;
                 
-//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
-//                    write_emit(iter->channel_event_sock, (char*)&cews, sizeof(cews));
-//                }
                 
+                /* add event to send list */
+                cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
+                cews->type = CIP_EVENT_WINDOW_SHOW;
+                
+                cews->wid = e->window;
+                cews->bare = e->override_redirect;
+                wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
+                wr->channel_type = CIP_CHANNEL_MASTER;
+                list_add_tail(&wr->list_node, event_list);
+                
+                /* inform uv thread */
+                uv_async_send(&async);
                 break;
             }
             case XCB_UNMAP_NOTIFY:;
                 xcb_unmap_notify_event_t *umne = (xcb_unmap_notify_event_t*)event;
-                cip_event_window_hide_t cewh;
-                cewh.type = CIP_EVENT_WINDOW_HIDE;
-                cewh.wid = umne->window;
                 
-//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
-//                    write_emit(iter->channel_event_sock, (char*)&cewh, sizeof(cewh));
-//                }
+                /* add event to send list */
+                cip_event_window_hide_t *cewh = malloc(sizeof(cip_event_window_hide_t));
+                cewh->type = CIP_EVENT_WINDOW_HIDE;
+                
+                cewh->wid = umne->window;
+                wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init((char*)cewh, sizeof(*cewh));
+                wr->channel_type = CIP_CHANNEL_MASTER;
+                list_add_tail(&wr->list_node, event_list);
+                
+                /* inform uv thread */
+                uv_async_send(&async);
                 break;
             default:
                 if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
