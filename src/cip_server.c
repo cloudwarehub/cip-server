@@ -24,8 +24,8 @@ int need_session = 0;
 
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
-                       uv_buf_t* buf) {
-    printf("alloc\n");
+                       uv_buf_t* buf)
+{
     cip_channel_t *channel = (cip_channel_t*)handle->data;
     
     /* if not connected, allocate cip_message_connect_t buf */
@@ -38,7 +38,8 @@ static void alloc_buffer(uv_handle_t* handle,
     }
 }
 
-void after_write(uv_write_t *req, int status) {
+void after_write(uv_write_t *req, int status)
+{
     write_req_t* wr;
     wr = (write_req_t*) req;
     free(wr->buf.base);
@@ -51,11 +52,13 @@ void after_write(uv_write_t *req, int status) {
     }
 }
 
-static void on_close(uv_handle_t* peer) {
+static void on_close(uv_handle_t* peer)
+{
     free(peer);
 }
 
-static void after_shutdown(uv_shutdown_t* req, int status) {
+static void after_shutdown(uv_shutdown_t* req, int status)
+{
     uv_close((uv_handle_t*) req->handle, on_close);
     free(req);
 }
@@ -78,7 +81,8 @@ void recover_state(cip_channel_t *channel)
     // TODO
 }
     
-static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
+static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
+{
     printf("read bytes: %d\n", (int)nread);
 
     if (nread < 0) {
@@ -174,7 +178,8 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
 }
 
 
-void connection_cb(uv_stream_t *server, int status) {
+void connection_cb(uv_stream_t *server, int status)
+{
     printf("new conn\n");
     if (status != 0) {
         fprintf(stderr, "Connect error %s\n", uv_err_name(status));
@@ -349,7 +354,8 @@ void emit_write(uv_async_t *handle)
     }
 }
 
-void xorg_after(uv_work_t *req, int status) {
+void xorg_after(uv_work_t *req, int status)
+{
     fprintf(stderr, "xorg end\n");
     free(async.data);
     uv_close((uv_handle_t*) &async, NULL);
