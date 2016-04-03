@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "xcb/xcb.h"
-#include "xcb/composite.h"
-#include "xcb/damage.h"
-#include "uv.h"
+#include <string.h>
+#include <xcb/xcb.h>
+#include <xcb/composite.h>
+#include <xcb/damage.h>
+#include <uv.h>
 #include "list.h"
 #include "common.h"
 #include "cip_protocol.h"
