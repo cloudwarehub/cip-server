@@ -25,8 +25,6 @@ cip-server is a part of the
 
 `make`
 
-`make install`
-
 
 ### Running CIP Server
 
@@ -36,4 +34,10 @@ cip-server is a part of the
 
 * Run CIP Server
 
-`./cip-server`
+default port is 5999, default display is :0
+
+`./cip-server[ -p port -d display]`
+
+* For help
+
+`./cip-server -h`

@@ -22,6 +22,11 @@ uv_async_t async;
 
 int need_session = 0;
 
+/* default cip port */
+int port = 5999;
+char display[20] = ":0";
+
+
 static void alloc_buffer(uv_handle_t* handle,
                        size_t suggested_size,
                        uv_buf_t* buf)
@@ -159,6 +164,30 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
                 
                 /* recover window state on channel established */
                 recover_state(channel);
+                break;
+                
+            case CIP_CHANNEL_DISPLAY:
+                printf("display channel\n");
+                
+                /* write connect result back */
+                wr = (write_req_t*) malloc(sizeof(write_req_t));
+                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
+                if (need_session) {
+                    msg_conn_rpl->result = CIP_RESULT_NEED_SESSION;
+                } else {
+                    msg_conn_rpl->result = CIP_RESULT_SUCCESS;
+                    cip_session_t *cip_session = malloc(sizeof(cip_session_t));
+                    cip_session_init(cip_session);
+                    cip_session->display_channel = channel;
+                    list_add_tail(&cip_session->list_node, &cip_context.sessions);
+                }
+                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
+                uv_write(&wr->req, client, &wr->buf, 1, after_write);
+                
+                channel->connected = 1;
+                channel->type = CIP_CHANNEL_DISPLAY;
+                channel->client = client;
+                
                 break;
                 
             default:
@@ -359,12 +388,35 @@ void xorg_after(uv_work_t *req, int status)
     uv_close((uv_handle_t*) &async, NULL);
 }
 
-
-int main()
+void usage(char *exe)
 {
+    printf("Usage: %s -p [port(5999)] -d [display(:0)]\n", exe);
+}
+
+
+int main(int argc, char *argv[])
+{
+    int ch;
+    while ((ch = getopt(argc, argv, "p:d:h")) != -1) {
+        switch (ch) {
+            case 'p':
+                port = atoi(optarg);
+                break;
+            case 'd':
+                strcpy(display, optarg);
+                break;
+            case 'h':
+            case '?':
+                usage(argv[0]);
+                exit(-1);
+                break;
+            default:
+                break;
+        }
+    }
     INIT_LIST_HEAD(&cip_context.sessions);
     INIT_LIST_HEAD(&cip_context.windows);
-    cip_context.xconn = xcb_connect(NULL, NULL);
+    cip_context.xconn = xcb_connect(display, NULL);
     if (xcb_connection_has_error(cip_context.xconn)) {
         printf("cannot connect to xserver\n");
         xcb_disconnect(cip_context.xconn);
@@ -392,7 +444,7 @@ int main()
     uv_queue_work(loop, &req, xorg_thread, xorg_after);
     
     /* start tcp server loop */
-    r = uv_ip4_addr("0.0.0.0", 5999, &addr);
+    r = uv_ip4_addr("0.0.0.0", port, &addr);
     if (r) {
         fprintf(stderr, "convert addr error\n");
         return 1;

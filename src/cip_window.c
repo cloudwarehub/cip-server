@@ -18,6 +18,7 @@
 typedef uint8_t uint8;
 
 extern cip_context_t cip_context;
+extern uv_async_t async;
 
 void toeven(size_t *num)
 {
@@ -213,17 +214,24 @@ void cip_window_frame_send(int wid)
             for (i = 0; i < i_nal; ++i) {
                 /* broadcast event */
                 int length = sizeof(cip_event_window_frame_t) + nal[i].i_payload;
-                char buf[length];
+                char *buf = malloc(length);
                 printf("nal length:%d\n", length);
                 cip_event_window_frame_t *p = (cip_event_window_frame_t*)buf;
                 p->wid = window->wid;
                 p->length = nal[i].i_payload;
                 memcpy(buf + sizeof(cip_event_window_frame_t), nal[i].p_payload, nal[i].i_payload);
                 
-                //cip_session_t *iter;
-//                list_for_each_entry(iter, &cip_context.sessions, list_node) {
-//                    write_emit(iter->channel_display_sock, buf, length);
-//                }
+                
+                /* add event to send list */
+                write_req_t *wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init(buf, length);
+                wr->channel_type = CIP_CHANNEL_DISPLAY;
+                list_head_t *event_list = async.data;
+                list_add_tail(&wr->list_node, event_list);
+                
+                /* inform uv thread */
+                uv_async_send(&async);
+                
             }
             break;
         }
