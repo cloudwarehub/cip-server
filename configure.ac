@@ -21,11 +21,11 @@ AC_CHECK_LIB(x264, x264_encoder_encode,
     [AC_MSG_ERROR([x264 libraries not found.])]
 )
 
-AC_CHECK_LIB([X11-xcb],[xcb_connect],AC_MSG_ERROR([ *** Unable to find xcb library]))
+AC_CHECK_LIB([X11-xcb],[],AC_MSG_ERROR([ *** Unable to find xcb library]))
 
-AC_CHECK_LIB([xcb-composite],[xcb_composite_redirect_subwindows],AC_MSG_ERROR([ *** Unable to find xcb-composite library]))
+AC_CHECK_LIB([xcb-composite],[],AC_MSG_ERROR([ *** Unable to find xcb-composite library]))
 
-AC_CHECK_LIB([xcb-damage],[xcb_damage_create],AC_MSG_ERROR([ *** Unable to find xcb-damage library]))
+AC_CHECK_LIB([xcb-damage],[],AC_MSG_ERROR([ *** Unable to find xcb-damage library]))
 
 # Checks for header files.
 
