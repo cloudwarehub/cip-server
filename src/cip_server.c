@@ -28,18 +28,12 @@ static void alloc_buffer(uv_handle_t* handle,
     printf("alloc\n");
     cip_channel_t *channel = (cip_channel_t*)handle->data;
     
-    buf->base = malloc(suggested_size);
-    printf("%p\n", buf->base);
-    buf->len = suggested_size;
-    return;
-    
     /* if not connected, allocate cip_message_connect_t buf */
     if (!channel->connected) {
         buf->base = malloc(sizeof(cip_message_connect_t));
         buf->len = sizeof(cip_message_connect_t);
     } else {
         buf->base = malloc(suggested_size);
-        printf("%p\n", buf->base);
         buf->len = suggested_size;
     }
 }
@@ -86,7 +80,6 @@ void recover_state(cip_channel_t *channel)
     
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
     printf("read bytes: %d\n", (int)nread);
-    printf("bufbase:%p\n", buf->base);
 
     if (nread < 0) {
         /* Error or EOF */
@@ -100,7 +93,6 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) 
 
     if (nread == 0) {
         /* Everything OK, but nothing read. */
-        printf("%p\n", buf->base);
         free(buf->base);
         return;
     }
