@@ -273,7 +273,6 @@ void xorg_thread()
 
 void emit_write(uv_async_t *handle)
 {
-    printf("emit write\n");
     list_head_t *event_list = async.data;
     while (!list_empty(event_list)) {
         write_req_t *wr = list_entry(event_list->next, write_req_t, list_node);
@@ -281,6 +280,7 @@ void emit_write(uv_async_t *handle)
         cip_session_t *sess;
         list_for_each_entry(sess, &cip_context.sessions, list_node) {
             if (wr->channel_type == CIP_CHANNEL_EVENT && sess->event_channel) {
+                printf("emit write event\n");
                 uv_write(&wr->req, sess->event_channel->client, &wr->buf, 1, after_write);
             }
             if (wr->channel_type == CIP_CHANNEL_MASTER && sess->master_channel) {
