@@ -60,6 +60,9 @@ void after_write(uv_write_t *req, int status)
 
 static void on_close(uv_handle_t* peer)
 {
+    /* destroy channel ring buffer */
+    cip_channel_t *cip_channel = peer->data;
+    ringbuf_free(&cip_channel->rx_ring);
     free(peer);
 }
 
@@ -119,7 +122,10 @@ void recover_state(cip_channel_t *channel)
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 {
     printf("read bytes: %d\n", (int)nread);
-
+    
+    /* get socket channel */
+    cip_channel_t *channel = client->data;
+    ringbuf_memcpy_into(channel->rx_ring, buf->base, nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
@@ -136,8 +142,6 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
         return;
     }
     
-    /* get socket channel */
-    cip_channel_t *channel = (cip_channel_t*)client->data;
     write_req_t *wr;
     cip_message_connect_reply_t *msg_conn_rpl;
     if (!channel->connected) {
@@ -253,6 +257,7 @@ void connection_cb(uv_stream_t *server, int status)
         /* create cip_channel_t and read connect msg from client */
         cip_channel_t *cip_channel = (cip_channel_t*)malloc(sizeof(cip_channel_t));
         cip_channel->connected = 0;
+        cip_channel->rx_ring = ringbuf_new(1024);
         client->data = cip_channel;
         
         /* wait for connect msg, non block */
