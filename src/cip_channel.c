@@ -63,11 +63,13 @@ void cip_channel_handle(cip_channel_t *channel)
         
         write_req_t *wr;
         cip_message_connect_reply_t *msg_conn_rpl;
-        cip_message_connect_t *msg_conn = (cip_message_connect_t*)ringbuf_head(channel->rx_ring);
-        switch (msg_conn->channel_type) {
+        cip_message_connect_t msg_conn;
+        ringbuf_memcpy_from(&msg_conn, channel->rx_ring, sizeof(cip_message_connect_t));
+        
+        switch (msg_conn.channel_type) {
             case CIP_CHANNEL_MASTER:
                 printf("master channel\n");
-                cip_check_version(msg_conn->version.major_version, msg_conn->version.minor_version);
+                cip_check_version(msg_conn.version.major_version, msg_conn.version.minor_version);
                 
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_MASTER;
