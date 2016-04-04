@@ -273,6 +273,7 @@ void xorg_thread()
 
 void emit_write(uv_async_t *handle)
 {
+    printf("emit write\n");
     list_head_t *event_list = async.data;
     while (!list_empty(event_list)) {
         write_req_t *wr = list_entry(event_list->next, write_req_t, list_node);
