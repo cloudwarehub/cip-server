@@ -21,8 +21,6 @@ cip_context_t cip_context;
 uv_loop_t *loop;
 uv_async_t async;
 
-int need_session = 0;
-
 /* default cip port */
 int port = 5999;
 char display[20] = ":0";
@@ -34,14 +32,10 @@ static void alloc_buffer(uv_handle_t* handle,
 {
     cip_channel_t *channel = (cip_channel_t*)handle->data;
     
-    /* if not connected, allocate cip_message_connect_t buf */
-    if (!channel->connected) {
-        buf->base = malloc(sizeof(cip_message_connect_t));
-        buf->len = sizeof(cip_message_connect_t);
-    } else {
-        buf->base = malloc(suggested_size);
-        buf->len = suggested_size;
-    }
+    /* TODO: check ringbuf avaliable space */
+    
+    buf->base = (char*)ringbuf_tail(channel->rx_ring);
+    buf->len = ringbuf_bytes_free(channel->rx_ring);
 }
 
 void after_write(uv_write_t *req, int status)
@@ -84,161 +78,29 @@ cip_session_t *find_session(char *session)
     return iter;
 }
 
-/* recover window state to event channel */
-void recover_state(cip_channel_t *channel)
-{
-    write_req_t *wr;
-    cip_window_t *iter;
-    list_for_each_entry(iter, &cip_context.windows, list_node) {
-        /* send create window event */
-        wr = (write_req_t*) malloc(sizeof(write_req_t));
-        cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
-        cewc->type = CIP_EVENT_WINDOW_CREATE;
-        cewc->wid = iter->wid;
-        cewc->x = iter->x;
-        cewc->y = iter->y;
-        cewc->width = iter->width;
-        cewc->height = iter->height;
-        cewc->bare = iter->bare;
-        wr = malloc(sizeof(write_req_t));
-        wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
-        wr->buf = uv_buf_init((char*)cewc, sizeof(cip_event_window_create_t));
-        uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
-        
-        /* if viewable send show window event */
-        if (iter->viewable) {
-            wr = malloc(sizeof(write_req_t));
-            cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
-            cews->type = CIP_EVENT_WINDOW_SHOW;
-            
-            cews->wid = iter->wid;
-            cews->bare = iter->bare;
-            wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
-            uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
-        }
-    }
-}
-
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 {
     printf("read bytes: %d\n", (int)nread);
     
-    /* get socket channel */
-    cip_channel_t *channel = client->data;
-    ringbuf_memcpy_into(channel->rx_ring, buf->base, nread);
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
         
-        free(buf->base);
         uv_shutdown_t* sreq = malloc(sizeof* sreq);
         ASSERT(0 == uv_shutdown(sreq, client, after_shutdown));
         return;
     }
-
+    
     if (nread == 0) {
         /* Everything OK, but nothing read. */
-        free(buf->base);
         return;
     }
     
-    write_req_t *wr;
-    cip_message_connect_reply_t *msg_conn_rpl;
-    if (!channel->connected) {
-        /* TODO: check nread size */
-        
-        cip_message_connect_t *msg_conn = (cip_message_connect_t*)buf->base;
-        switch (msg_conn->channel_type) {
-            case CIP_CHANNEL_MASTER:
-                printf("master channel\n");
-                cip_check_version(msg_conn->version.major_version, msg_conn->version.minor_version);
-                
-                channel->connected = 1;
-                channel->type = CIP_CHANNEL_MASTER;
-                channel->client = client;
-                
-                /* create new session and add to cip_context */
-                cip_session_t *cip_session = malloc(sizeof(cip_session_t));
-                cip_session_init(cip_session);
-                cip_session->master_channel = channel;
-                /* generate random session string */
-                rand_string(cip_session->session, sizeof(cip_session->session));
-                list_add_tail(&cip_session->list_node, &cip_context.sessions);
-                printf("session: %s\n", cip_session->session);
-                
-                /* write connect result back */
-                wr = (write_req_t*) malloc(sizeof(write_req_t));
-                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
-                msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
-                uv_write(&wr->req, client, &wr->buf, 1, after_write);
-                break;
-                
-            case CIP_CHANNEL_EVENT:
-                printf("event channel\n");
-                
-                /* write connect result back */
-                wr = (write_req_t*) malloc(sizeof(write_req_t));
-                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
-                if (need_session) {
-                    msg_conn_rpl->result = CIP_RESULT_NEED_SESSION;
-                } else {
-                    msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                    cip_session_t *cip_session = malloc(sizeof(cip_session_t));
-                    cip_session_init(cip_session);
-                    cip_session->event_channel = channel;
-                    list_add_tail(&cip_session->list_node, &cip_context.sessions);
-                }
-                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
-                uv_write(&wr->req, client, &wr->buf, 1, after_write);
-                
-                channel->connected = 1;
-                channel->type = CIP_CHANNEL_EVENT;
-                channel->client = client;
-                
-                /* recover window state on channel established */
-                recover_state(channel);
-                break;
-                
-            case CIP_CHANNEL_DISPLAY:
-                printf("display channel\n");
-                
-                /* write connect result back */
-                wr = (write_req_t*) malloc(sizeof(write_req_t));
-                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
-                if (need_session) {
-                    msg_conn_rpl->result = CIP_RESULT_NEED_SESSION;
-                } else {
-                    msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                    cip_session_t *cip_session = malloc(sizeof(cip_session_t));
-                    cip_session_init(cip_session);
-                    cip_session->display_channel = channel;
-                    list_add_tail(&cip_session->list_node, &cip_context.sessions);
-                }
-                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
-                uv_write(&wr->req, client, &wr->buf, 1, after_write);
-                
-                channel->connected = 1;
-                channel->type = CIP_CHANNEL_DISPLAY;
-                channel->client = client;
-                
-                break;
-                
-            default:
-                break;
-        }
-        
-    } else { /* channel already connected */
-        /* TODO: check nread size */
-        
-        if (channel->type == CIP_CHANNEL_MASTER) {
-            cip_message_t *msg = (cip_message_t*)buf->base;
-        } else if (channel->type == CIP_CHANNEL_EVENT) {
-            cip_event_t *m = (cip_event_t*)buf->base;
-        }
-    }
+    /* get socket channel */
+    cip_channel_t *channel = client->data;
+    ringbuf_memcpy_into(channel->rx_ring, buf->base, nread);
     
-    free(buf->base);
+    cip_channel_handle(channel);
 }
 
 
@@ -258,6 +120,7 @@ void connection_cb(uv_stream_t *server, int status)
         cip_channel_t *cip_channel = (cip_channel_t*)malloc(sizeof(cip_channel_t));
         cip_channel->connected = 0;
         cip_channel->rx_ring = ringbuf_new(1024);
+        cip_channel->client = (uv_stream_t*)client;
         client->data = cip_channel;
         
         /* wait for connect msg, non block */

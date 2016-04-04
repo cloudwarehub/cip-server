@@ -12,4 +12,6 @@ typedef struct {
     ringbuf_t rx_ring; /* used for receiving tcp chunk */
 } cip_channel_t;
 
+void cip_channel_handle(cip_channel_t *channel);
+
 #endif

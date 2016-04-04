@@ -54,4 +54,6 @@ typedef struct {
     uv_buf_t buf;
 } write_req_t;
 
+void after_write(uv_write_t *req, int status);
+
 #endif /* cip_server_h */
