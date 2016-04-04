@@ -84,9 +84,38 @@ cip_session_t *find_session(char *session)
 /* recover window state to event channel */
 void recover_state(cip_channel_t *channel)
 {
-    // TODO
+    write_req_t *wr;
+    cip_window_t *iter;
+    list_for_each_entry(iter, &cip_context.windows, list_node) {
+        /* send create window event */
+        wr = (write_req_t*) malloc(sizeof(write_req_t));
+        cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
+        cewc->type = CIP_EVENT_WINDOW_CREATE;
+        cewc->wid = iter->wid;
+        cewc->x = iter->x;
+        cewc->y = iter->y;
+        cewc->width = iter->width;
+        cewc->height = iter->height;
+        cewc->bare = iter->bare;
+        wr = malloc(sizeof(write_req_t));
+        wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
+        wr->buf = uv_buf_init((char*)cewc, sizeof(cip_event_window_create_t));
+        uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
+        
+        /* if viewable send show window event */
+        if (iter->viewable) {
+            wr = malloc(sizeof(write_req_t));
+            cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
+            cews->type = CIP_EVENT_WINDOW_SHOW;
+            
+            cews->wid = iter->wid;
+            cews->bare = iter->bare;
+            wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
+            uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
+        }
+    }
 }
-    
+
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 {
     printf("read bytes: %d\n", (int)nread);
@@ -263,6 +292,10 @@ void xorg_thread()
                 INIT_LIST_HEAD(&cip_window->list_node);
                 list_add(&cip_window->list_node, &cip_context.windows);
                 cip_window->wid = e->window;
+                cip_window->x = e->x;
+                cip_window->y = e->y;
+                cip_window->bare = e->override_redirect;
+                cip_window->viewable = 0;
                 cip_window->width = e->width;
                 cip_window->height = e->height;
                 cip_window_stream_init(cip_window);
@@ -281,7 +314,7 @@ void xorg_thread()
                 wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
-                /* inform uv thread send it */
+                /* inform uv thread to send event */
                 uv_async_send(&async);
                 break;
             }
@@ -307,11 +340,20 @@ void xorg_thread()
                 wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
-                /* inform uv thread */
+                /* inform uv thread to send event */
                 uv_async_send(&async);
                 break;
             case XCB_MAP_NOTIFY:{
                 xcb_map_notify_event_t *e = (xcb_map_notify_event_t*)event;
+                
+                /* set cip window viewable */
+                cip_window_t *iter;
+                list_for_each_entry(iter, &cip_context.windows, list_node) {
+                    if (iter->wid == e->window) {
+                        iter->viewable = 1;
+                        break;
+                    }
+                }
                 
                 /* create damage */
                 xcb_damage_damage_t damage = xcb_generate_id(xconn);
@@ -329,7 +371,7 @@ void xorg_thread()
                 wr->channel_type = CIP_CHANNEL_EVENT;
                 list_add_tail(&wr->list_node, event_list);
                 
-                /* inform uv thread */
+                /* inform uv thread to send event */
                 uv_async_send(&async);
                 break;
             }
