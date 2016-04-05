@@ -165,6 +165,13 @@ fail2:
     return 1;
 }
 
+void cip_window_stream_reset(cip_window_t *window)
+{
+    x264_picture_clean(&window->pic);
+    x264_encoder_close(window->encoder);
+    cip_window_stream_init(window);
+}
+
 void cip_window_frame_send(int wid)
 {
     

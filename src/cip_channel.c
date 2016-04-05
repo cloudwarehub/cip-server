@@ -101,6 +101,9 @@ void handle_event(cip_event_t *event)
             window->height = event->window_resize.height;
             u32 values[] = {window->width, window->height};
             xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
+            
+            /* h264 stream resize */
+            cip_window_stream_reset(window);
             break;
         }
         default:

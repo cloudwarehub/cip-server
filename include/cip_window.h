@@ -31,5 +31,6 @@ typedef struct {
 
 void cip_window_frame_send(int wid);
 int cip_window_stream_init(cip_window_t *window);
+void cip_window_stream_reset(cip_window_t *window);
 
 #endif /* cip_window_h */
