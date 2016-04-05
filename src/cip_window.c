@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "cip_window.h"
 #include "cip_server.h"
 #include "cip_protocol.h"
 #include "list.h"

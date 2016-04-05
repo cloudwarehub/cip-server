@@ -10,8 +10,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "cip_window.h"
 #include "cip_protocol.h"
 #include "cip_common.h"
+#include "cip_session.h"
+#include "list.h"
 
 int cip_check_version(uint8_t major, uint8_t minor)
 {
@@ -72,4 +75,28 @@ int get_size_by_type(enum CIP_EVENT type)
         default:
             return 0;
     }
+}
+
+
+/* traverse cip sessions and find whose session match query */
+cip_session_t *find_session(char *session, list_head_t *sessions)
+{
+    cip_session_t *iter;
+    list_for_each_entry(iter, sessions, list_node) {
+        if (strcmp(iter->session, session)) {
+            return iter;
+        }
+    }
+    return NULL;
+}
+
+cip_window_t *find_window(uint32_t wid, list_head_t *windows)
+{
+    cip_window_t *win;
+    list_for_each_entry(win, windows, list_node) {
+        if (win->wid == wid) {
+            return win;
+        }
+    }
+    return NULL;
 }

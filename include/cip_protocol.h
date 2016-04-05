@@ -135,6 +135,8 @@ typedef union CIP_ATTR_PACKED {
     cip_event_mouse_move_t mouse_move;
     cip_event_key_down_t key_down;
     cip_event_key_up_t key_up;
+    cip_event_window_move_t window_move;
+    cip_event_window_resize_t window_resize;
 } cip_event_t;
 
 

@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <xcb/xtest.h>
 #include "list.h"
+#include "cip_window.h"
 #include "cip_channel.h"
 #include "cip_common.h"
 #include "cip_session.h"
@@ -86,6 +87,22 @@ void handle_event(cip_event_t *event)
                 xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
             }
             break;
+        case CIP_EVENT_WINDOW_MOVE: {
+            cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
+            window->x = event->window_move.x;
+            window->y = event->window_move.y;
+            u32 values[] = {window->x, window->y};
+            xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, values);
+            break;
+        }
+        case CIP_EVENT_WINDOW_RESIZE: {
+            cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
+            window->width = event->window_resize.width;
+            window->height = event->window_resize.height;
+            u32 values[] = {window->width, window->height};
+            xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
+            break;
+        }
         default:
             break;
     }

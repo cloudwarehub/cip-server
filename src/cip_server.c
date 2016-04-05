@@ -66,17 +66,6 @@ static void after_shutdown(uv_shutdown_t* req, int status)
     free(req);
 }
 
-/* traverse cip sessions and find whose session match query */
-cip_session_t *find_session(char *session)
-{
-    cip_session_t *iter = NULL;
-    list_for_each_entry(iter, &cip_context.sessions, list_node) {
-        if (strcmp(iter->session, session)) {
-            return iter;
-        }
-    }
-    return iter;
-}
 
 static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
 {
