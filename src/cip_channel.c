@@ -139,9 +139,12 @@ void cip_channel_handle(cip_channel_t *channel)
                 
                 /* write connect result back */
                 wr = (write_req_t*) malloc(sizeof(write_req_t));
-                msg_conn_rpl = malloc(sizeof(cip_message_connect_reply_t));
+                /* send result and session */
+                char *buf = malloc(sizeof(cip_message_connect_reply_t) + CIP_SESSION_LENGTH);
+                msg_conn_rpl = (cip_message_connect_reply_t*)buf;
                 msg_conn_rpl->result = CIP_RESULT_SUCCESS;
-                wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
+                memcpy(buf + sizeof(cip_message_connect_reply_t), cip_session->session, CIP_SESSION_LENGTH);
+                wr->buf = uv_buf_init((char*)buf, sizeof(cip_message_connect_reply_t) + CIP_SESSION_LENGTH);
                 uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
                 break;
                 

@@ -6,6 +6,8 @@
 #define CIP_ATTR_PACKED __attribute__ ((__packed__))
 #define CIP_SESSION_LENGTH 128
 
+
+/* common data types */
 /* result list */
 enum CIP_RESULT {
     CIP_RESULT_SUCCESS,
@@ -23,30 +25,32 @@ enum CIP_CHANNEL {
     CIP_CHANNEL_DATA,
 };
 
-#define CIP_KEY_CODE_MOUSE_LEFT 1
-#define CIP_KEY_CODE_MOUSE_RIGHT 2
-
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 major_version;
     u8 minor_version;
 } version_t;
 
-
-
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     version_t version;
     u8 channel_type;
     u8 encrypt; /* bool, encrypt or not */
 } cip_message_connect_t;
 
-typedef struct {
+typedef struct CIP_ATTR_PACKED {
     u8 result;
 } cip_message_connect_reply_t;
 
+/* end common data types */
+
+/* master channel data types */
 typedef struct {
-    u16 type;
-    u32 length;
-} cip_message_t;
+    
+} cip_request_token_get;
+
+/* end master channel data types */
+
+#define CIP_KEY_CODE_MOUSE_LEFT 1
+#define CIP_KEY_CODE_MOUSE_RIGHT 2
 
 enum CIP_EVENT {
     CIP_EVENT_WINDOW_CREATE,
@@ -138,6 +142,7 @@ typedef union CIP_ATTR_PACKED {
     cip_event_window_move_t window_move;
     cip_event_window_resize_t window_resize;
 } cip_event_t;
+
 
 
 #endif
