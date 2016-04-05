@@ -6,6 +6,7 @@
 #define CIP_ATTR_PACKED __attribute__ ((__packed__))
 #define CIP_SESSION_LENGTH 128
 
+/* result list */
 enum CIP_RESULT {
     CIP_RESULT_SUCCESS,
     CIP_RESULT_FAIL,
@@ -14,12 +15,16 @@ enum CIP_RESULT {
     CIP_RESULT_NEED_SESSION,
 };
 
+/* channel types */
 enum CIP_CHANNEL {
     CIP_CHANNEL_MASTER,
     CIP_CHANNEL_EVENT,
     CIP_CHANNEL_DISPLAY,
     CIP_CHANNEL_DATA,
 };
+
+#define CIP_KEY_CODE_MOUSE_LEFT 1
+#define CIP_KEY_CODE_MOUSE_RIGHT 2
 
 typedef struct {
     u8 major_version;
@@ -48,6 +53,11 @@ enum CIP_EVENT {
     CIP_EVENT_WINDOW_DESTROY,
     CIP_EVENT_WINDOW_SHOW,
     CIP_EVENT_WINDOW_HIDE,
+    CIP_EVENT_MOUSE_MOVE,
+    CIP_EVENT_KEY_DOWN,
+    CIP_EVENT_KEY_UP,
+    CIP_EVENT_WINDOW_MOVE,
+    CIP_EVENT_WINDOW_RESIZE,
 };
 
 typedef struct CIP_ATTR_PACKED {
@@ -81,12 +91,51 @@ typedef struct CIP_ATTR_PACKED {
     u32 length;
 } cip_event_window_frame_t;
 
+/* bellow is event from client */
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    i16 x;
+    i16 y;
+} cip_event_mouse_move_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    u8 code;
+} cip_event_key_down_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    u8 code;
+} cip_event_key_up_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    i16 x;
+    i16 y;
+} cip_event_window_move_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    u16 width;
+    u16 height;
+} cip_event_window_resize_t;
+
+
 typedef union CIP_ATTR_PACKED {
     u8 type;
     cip_event_window_create_t window_create;
     cip_event_window_destroy_t window_destroy;
     cip_event_window_show_t window_show;
     cip_event_window_hide_t window_hide;
+    cip_event_mouse_move_t mouse_move;
+    cip_event_key_down_t key_down;
+    cip_event_key_up_t key_up;
 } cip_event_t;
+
 
 #endif

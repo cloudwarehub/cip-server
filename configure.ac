@@ -27,6 +27,8 @@ AC_CHECK_LIB([xcb-composite],[],AC_MSG_ERROR([ *** Unable to find xcb-composite 
 
 AC_CHECK_LIB([xcb-damage],[],AC_MSG_ERROR([ *** Unable to find xcb-damage library]))
 
+AC_CHECK_LIB([xcb-xtest],[],AC_MSG_ERROR([ *** Unable to find xcb-xtest library]))
+
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.

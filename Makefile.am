@@ -6,5 +6,5 @@ cip_server_SOURCES=./src/cip_server.c \
     ./src/cip_session.c \
     ./src/cip_channel.c \
     ./src/ringbuf.c
-LIBS += -lpthread -luv -lx264 -lxcb -lxcb-composite -lxcb-damage
+LIBS += -lpthread -luv -lx264 -lxcb -lxcb-composite -lxcb-damage -lxcb-xtest
 AM_CPPFLAGS = -I./include

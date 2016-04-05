@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <xcb/xtest.h>
 #include "list.h"
 #include "cip_channel.h"
 #include "cip_common.h"
@@ -51,6 +52,42 @@ void recover_state(cip_channel_t *channel)
             wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
             uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
         }
+    }
+}
+
+uint8_t map_key_code(uint8_t code)
+{
+    return code;
+}
+
+void handle_event(cip_event_t *event)
+{
+    switch (event->type) {
+        case CIP_EVENT_MOUSE_MOVE:
+            xcb_warp_pointer(cip_context.xconn, XCB_NONE, event->mouse_move.wid, 0, 0, 0, 0, event->mouse_move.x, event->mouse_move.y);
+            break;
+        case CIP_EVENT_KEY_DOWN:
+            if (event->key_down.code == CIP_KEY_CODE_MOUSE_LEFT) {
+                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, 1, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
+            } else if (event->key_down.code == CIP_KEY_CODE_MOUSE_RIGHT) {
+                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, 2, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
+            } else {
+                uint8_t code = map_key_code(event->key_down.code);
+                xcb_test_fake_input(cip_context.xconn, XCB_KEY_PRESS, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            }
+            break;
+        case CIP_EVENT_KEY_UP:
+            if (event->key_down.code == CIP_KEY_CODE_MOUSE_LEFT) {
+                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, 1, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
+            } else if (event->key_down.code == CIP_KEY_CODE_MOUSE_RIGHT) {
+                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, 2, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
+            } else {
+                uint8_t code = map_key_code(event->key_down.code);
+                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            }
+            break;
+        default:
+            break;
     }
 }
 
@@ -143,12 +180,26 @@ void cip_channel_handle(cip_channel_t *channel)
                 break;
         }
     } else { /* channel already connected */
-        /* TODO: check nread size */
         
         if (channel->type == CIP_CHANNEL_MASTER) {
             //cip_message_t *msg = (cip_message_t*)buf->base;
         } else if (channel->type == CIP_CHANNEL_EVENT) {
-            //cip_event_t *m = (cip_event_t*)buf->base;
+            uint8_t ev_type = *(char*)ringbuf_tail(channel->rx_ring);
+            int expect_size = get_size_by_type(ev_type);
+            while (ringbuf_bytes_used(channel->rx_ring) > expect_size) {
+                cip_event_t event;
+                ringbuf_memcpy_from(&event, channel->rx_ring, expect_size);
+                
+                /* handle event */
+                handle_event(&event);
+                
+                if (ringbuf_is_empty(channel->rx_ring)) {
+                    break;
+                } else {
+                    ev_type = *(char*)ringbuf_tail(channel->rx_ring);
+                    expect_size = get_size_by_type(ev_type);
+                }
+            }
         }
     }
 }
