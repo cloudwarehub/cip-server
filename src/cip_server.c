@@ -5,6 +5,8 @@
 #include <xcb/xcb.h>
 #include <xcb/composite.h>
 #include <xcb/damage.h>
+#include <xcb/xcb_atom.h>
+#include <xcb/xcb_icccm.h>
 #include <uv.h>
 #include "list.h"
 #include "common.h"
@@ -145,7 +147,7 @@ void xorg_thread()
                 xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
                 
                 uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE };
-                xcb_change_window_attributes(xconn, e->window, XCB_CW_EVENT_MASK, mask);
+                //xcb_change_window_attributes_checked(xconn, e->window, XCB_CW_EVENT_MASK, mask);
                 
                 /* create window context and init stream context */
                 cip_window_t *cip_window = malloc(sizeof(cip_window_t));
@@ -251,6 +253,16 @@ void xorg_thread()
                 /* inform uv thread */
                 uv_async_send(&async);
                 break;
+            case XCB_PROPERTY_NOTIFY: {
+                xcb_property_notify_event_t *pne = (xcb_property_notify_event_t*)event;
+                printf("prop: %d\n", pne->atom);
+                if (pne->atom == XCB_ATOM_WM_NAME) {
+                    xcb_icccm_get_text_property_reply_t data;
+                    xcb_icccm_get_wm_name_reply(cip_context.xconn, xcb_icccm_get_wm_name(cip_context.xconn, pne->window), &data, (void *)0);
+                    printf("%s\n", data.name);
+                }
+                break;
+            }
             default:
                 if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
                     xcb_damage_notify_event_t *damage_event = (xcb_damage_notify_event_t*)event;
