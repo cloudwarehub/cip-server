@@ -121,6 +121,20 @@ void connection_cb(uv_stream_t *server, int status)
     }
 }
 
+void handle_property_change(xcb_property_notify_event_t *pne)
+{
+    switch (pne->atom) {
+        case XCB_ATOM_WM_NAME:{
+            xcb_icccm_get_text_property_reply_t data;
+            xcb_icccm_get_wm_name_reply(cip_context.xconn, xcb_icccm_get_wm_name(cip_context.xconn, pne->window), &data, (void *)0);
+            printf("%s\n", data.name);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void xorg_thread()
 {
     xcb_connection_t *xconn;
@@ -146,7 +160,8 @@ void xorg_thread()
             case XCB_CREATE_NOTIFY: {
                 xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
                 
-                uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE };
+                /* notify wm property changes */
+                uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE};
                 xcb_change_window_attributes_checked(xconn, e->window, XCB_CW_EVENT_MASK, mask);
                 
                 /* create window context and init stream context */
@@ -255,14 +270,8 @@ void xorg_thread()
                 break;
             case XCB_PROPERTY_NOTIFY: {
                 xcb_property_notify_event_t *pne = (xcb_property_notify_event_t*)event;
-                xcb_get_atom_name_reply_t *rp = xcb_get_atom_name_reply(cip_context.xconn, xcb_get_atom_name(cip_context.xconn, pne->atom), (void*)0);
-                printf("prop: %d\n", pne->atom);
+                handle_property_change(pne);
                 
-                if (pne->atom == XCB_ATOM_WM_NAME) {
-                    xcb_icccm_get_text_property_reply_t data;
-                    xcb_icccm_get_wm_name_reply(cip_context.xconn, xcb_icccm_get_wm_name(cip_context.xconn, pne->window), &data, (void *)0);
-                    printf("%s\n", data.name);
-                }
                 break;
             }
             default:
