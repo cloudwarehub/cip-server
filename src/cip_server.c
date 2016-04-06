@@ -144,6 +144,9 @@ void xorg_thread()
             case XCB_CREATE_NOTIFY: {
                 xcb_create_notify_event_t *e = (xcb_create_notify_event_t*)event;
                 
+                uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE };
+                xcb_change_window_attributes(xconn, e->window, XCB_CW_EVENT_MASK, mask);
+                
                 /* create window context and init stream context */
                 cip_window_t *cip_window = malloc(sizeof(cip_window_t));
                 INIT_LIST_HEAD(&cip_window->list_node);
