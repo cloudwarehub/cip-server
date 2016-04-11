@@ -79,7 +79,7 @@ static void after_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
     if (nread < 0) {
         /* Error or EOF */
         ASSERT(nread == UV_EOF);
-        
+        printf("colse channel\n");
         uv_shutdown_t* sreq = malloc(sizeof* sreq);
         ASSERT(0 == uv_shutdown(sreq, client, after_shutdown));
         return;
