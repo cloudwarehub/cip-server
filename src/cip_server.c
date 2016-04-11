@@ -56,19 +56,20 @@ void after_write(uv_write_t *req, int status)
 
 static void on_close(uv_handle_t* peer)
 {
-    /* destroy channel ring buffer */
-    cip_channel_t *cip_channel = peer->data;
-    ringbuf_free(&cip_channel->rx_ring);
+    
     free(peer);
     
-    free(cip_channel);
-    peer->data = NULL;
 }
 
 static void after_shutdown(uv_shutdown_t* req, int status)
 {
     uv_close((uv_handle_t*) req->handle, on_close);
     free(req);
+    /* destroy channel ring buffer */
+    cip_channel_t *cip_channel = req->handle->data;
+    ringbuf_free(&cip_channel->rx_ring);
+    free(cip_channel);
+    req->handle->data = NULL;
 }
 
 
