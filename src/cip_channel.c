@@ -210,6 +210,9 @@ void cip_channel_handle(cip_channel_t *channel)
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_DISPLAY;
                 
+                /* recover display info */
+                recover_state(channel);
+
                 break;
                 
             default:

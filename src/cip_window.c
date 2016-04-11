@@ -245,6 +245,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
                 uv_async_send(&async);
                 
             }
+            pic->i_type = X264_TYPE_AUTO;
             break;
         }
     }
