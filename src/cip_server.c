@@ -62,7 +62,7 @@ static void on_close(uv_handle_t* peer)
     free(peer);
     
     free(cip_channel);
-    cip_channel = NULL;
+    peer->data = NULL;
 }
 
 static void after_shutdown(uv_shutdown_t* req, int status)
