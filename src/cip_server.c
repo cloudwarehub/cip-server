@@ -60,6 +60,9 @@ static void on_close(uv_handle_t* peer)
     cip_channel_t *cip_channel = peer->data;
     ringbuf_free(&cip_channel->rx_ring);
     free(peer);
+    
+    free(cip_channel);
+    cip_channel = NULL;
 }
 
 static void after_shutdown(uv_shutdown_t* req, int status)
