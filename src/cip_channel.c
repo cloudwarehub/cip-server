@@ -27,34 +27,41 @@ void recover_state(cip_channel_t *channel)
 {
     write_req_t *wr;
     cip_window_t *iter;
-    list_for_each_entry(iter, &cip_context.windows, list_node) {
-        /* send create window event */
-        wr = (write_req_t*) malloc(sizeof(write_req_t));
-        cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
-        cewc->type = CIP_EVENT_WINDOW_CREATE;
-        cewc->wid = iter->wid;
-        cewc->x = iter->x;
-        cewc->y = iter->y;
-        cewc->width = iter->width;
-        cewc->height = iter->height;
-        cewc->bare = iter->bare;
-        wr = malloc(sizeof(write_req_t));
-        wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
-        wr->buf = uv_buf_init((char*)cewc, sizeof(cip_event_window_create_t));
-        uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
-        
-        /* if viewable send show window event */
-        if (iter->viewable) {
+    if (channel->type == CIP_CHANNEL_EVENT) {
+        list_for_each_entry(iter, &cip_context.windows, list_node) {
+            /* send create window event */
+            wr = (write_req_t*) malloc(sizeof(write_req_t));
+            cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
+            cewc->type = CIP_EVENT_WINDOW_CREATE;
+            cewc->wid = iter->wid;
+            cewc->x = iter->x;
+            cewc->y = iter->y;
+            cewc->width = iter->width;
+            cewc->height = iter->height;
+            cewc->bare = iter->bare;
             wr = malloc(sizeof(write_req_t));
-            cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
-            cews->type = CIP_EVENT_WINDOW_SHOW;
-            
-            cews->wid = iter->wid;
-            cews->bare = iter->bare;
-            wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
+            wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
+            wr->buf = uv_buf_init((char*)cewc, sizeof(cip_event_window_create_t));
             uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
+            
+            /* if viewable send show window event */
+            if (iter->viewable) {
+                wr = malloc(sizeof(write_req_t));
+                cip_event_window_show_t *cews = malloc(sizeof(cip_event_window_show_t));
+                cews->type = CIP_EVENT_WINDOW_SHOW;
+                
+                cews->wid = iter->wid;
+                cews->bare = iter->bare;
+                wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
+                uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
+            }
+        }
+    } else if (channel->type == CIP_CHANNEL_DISPLAY) {
+        list_for_each_entry(iter, &cip_context.windows, list_node) {
+            cip_window_frame_send(iter->wid, 0);
         }
     }
+    
 }
 
 uint8_t map_key_code(uint8_t code)

@@ -29,7 +29,7 @@ typedef struct {
     uint16_t even_height;
 } cip_window_t;
 
-void cip_window_frame_send(int wid);
+void cip_window_frame_send(int wid, int force_keyframe);
 int cip_window_stream_init(cip_window_t *window);
 void cip_window_stream_reset(cip_window_t *window);
 

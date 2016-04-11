@@ -172,7 +172,7 @@ void cip_window_stream_reset(cip_window_t *window)
     cip_window_stream_init(window);
 }
 
-void cip_window_frame_send(int wid)
+void cip_window_frame_send(int wid, int force_keyframe)
 {
     
     
@@ -208,6 +208,10 @@ void cip_window_frame_send(int wid)
                        width, height );
             printf("b\n");
             free(img);
+            
+            if (force_keyframe) {
+                pic->i_type = X264_TYPE_KEYFRAME;
+            }
             pic->i_pts = window->i_frame++;
             
             printf("cc\n");

@@ -277,7 +277,7 @@ void xorg_thread()
             default:
                 if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
                     xcb_damage_notify_event_t *damage_event = (xcb_damage_notify_event_t*)event;
-                    cip_window_frame_send(damage_event->drawable);
+                    cip_window_frame_send(damage_event->drawable, 0);
                     xcb_damage_subtract(xconn, damage_event->damage, XCB_NONE, XCB_NONE);
                 }
                 break;
