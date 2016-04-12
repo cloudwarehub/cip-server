@@ -58,7 +58,7 @@ void recover_state(cip_channel_t *channel)
         }
     } else if (channel->type == CIP_CHANNEL_DISPLAY) {
         list_for_each_entry(iter, &cip_context.windows, list_node) {
-            cip_window_frame_send(iter->wid, 0);
+            cip_window_frame_send(iter->wid, 1);
         }
     }
     
