@@ -298,9 +298,14 @@ void emit_write(uv_async_t *handle)
         list_del(&wr->list_node);
         cip_session_t *sess;
         list_for_each_entry(sess, &cip_context.sessions, list_node) {
+            /* copy write request for each session, if use same write request, libuv write callback will free wr many times */
+            write_req_t *wr_cpy = malloc(sizeof(write_req_t));
+            char *buf = malloc(wr->buf.len);
+            memcpy(buf, wr->buf.base, wr->buf.len);
+            wr_cpy->buf = uv_buf_init(buf, wr->buf.len);
             if (wr->channel_type == CIP_CHANNEL_EVENT && sess->event_channel) {
                 printf("emit write event\n");
-                uv_write(&wr->req, sess->event_channel->client, &wr->buf, 1, after_write);
+                uv_write(&wr_cpy->req, sess->event_channel->client, &wr_cpy->buf, 1, after_write);
             }
             if (wr->channel_type == CIP_CHANNEL_MASTER && sess->master_channel) {
                 uv_write(&wr->req, sess->master_channel->client, &wr->buf, 1, after_write);
@@ -309,6 +314,8 @@ void emit_write(uv_async_t *handle)
                 uv_write(&wr->req, sess->display_channel->client, &wr->buf, 1, after_write);
             }
         }
+        free(wr->buf.base);
+        free(wr);
     }
 }
 
