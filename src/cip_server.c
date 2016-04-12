@@ -308,10 +308,10 @@ void emit_write(uv_async_t *handle)
                 uv_write(&wr_cpy->req, sess->event_channel->client, &wr_cpy->buf, 1, after_write);
             }
             if (wr->channel_type == CIP_CHANNEL_MASTER && sess->master_channel) {
-                uv_write(&wr->req, sess->master_channel->client, &wr->buf, 1, after_write);
+                uv_write(&wr_cpy->req, sess->master_channel->client, &wr_cpy->buf, 1, after_write);
             }
             if (wr->channel_type == CIP_CHANNEL_DISPLAY && sess->display_channel) {
-                uv_write(&wr->req, sess->display_channel->client, &wr->buf, 1, after_write);
+                uv_write(&wr_cpy->req, sess->display_channel->client, &wr_cpy->buf, 1, after_write);
             }
         }
         free(wr->buf.base);
