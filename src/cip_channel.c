@@ -144,14 +144,18 @@ void cip_channel_handle(cip_channel_t *channel)
                 channel->connected = 1;
                 channel->type = CIP_CHANNEL_MASTER;
                 
+                
                 /* create new session and add to cip_context */
                 cip_session_t *cip_session = malloc(sizeof(cip_session_t));
                 cip_session_init(cip_session);
                 cip_session->master_channel = channel;
+                
                 /* generate random session string */
                 rand_string(cip_session->session, sizeof(cip_session->session));
                 list_add_tail(&cip_session->list_node, &cip_context.sessions);
                 printf("session: %s\n", cip_session->session);
+                
+                channel->session = cip_session;
                 
                 /* write connect result back */
                 wr = (write_req_t*) malloc(sizeof(write_req_t));
@@ -178,6 +182,8 @@ void cip_channel_handle(cip_channel_t *channel)
                     cip_session_init(cip_session);
                     cip_session->event_channel = channel;
                     list_add_tail(&cip_session->list_node, &cip_context.sessions);
+                    
+                    channel->session = cip_session;
                 }
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
                 uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);
@@ -203,6 +209,8 @@ void cip_channel_handle(cip_channel_t *channel)
                     cip_session_init(cip_session);
                     cip_session->display_channel = channel;
                     list_add_tail(&cip_session->list_node, &cip_context.sessions);
+                    
+                    channel->session = cip_session;
                 }
                 wr->buf = uv_buf_init((char*)msg_conn_rpl, sizeof(cip_message_connect_reply_t));
                 uv_write(&wr->req, channel->client, &wr->buf, 1, after_write);

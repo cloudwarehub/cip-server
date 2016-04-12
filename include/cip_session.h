@@ -13,7 +13,9 @@
 #include "cip_channel.h"
 #include "cip_protocol.h"
 
-typedef struct {
+typedef struct cip_channel cip_channel_t;
+
+typedef struct cip_session {
     list_head_t list_node;
     cip_channel_t *master_channel;
     cip_channel_t *event_channel;

@@ -69,7 +69,10 @@ static void after_shutdown(uv_shutdown_t* req, int status)
     cip_channel_t *cip_channel = req->handle->data;
     ringbuf_free(&cip_channel->rx_ring);
     free(cip_channel);
-    req->handle->data = NULL;
+    
+    /* free session */
+    list_del(&cip_channel->session->list_node);
+    free(cip_channel->session);
 }
 
 
