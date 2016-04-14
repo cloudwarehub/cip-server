@@ -57,6 +57,7 @@ enum CIP_EVENT {
     CIP_EVENT_WINDOW_DESTROY,
     CIP_EVENT_WINDOW_SHOW,
     CIP_EVENT_WINDOW_HIDE,
+    CIP_EVENT_WINDOW_CONFIGURE,
     CIP_EVENT_MOUSE_MOVE,
     CIP_EVENT_KEY_DOWN,
     CIP_EVENT_KEY_UP,
@@ -89,6 +90,17 @@ typedef struct CIP_ATTR_PACKED {
     u8 bare;
     u32 wid;
 } cip_event_window_show_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    i16 x;
+    i16 y;
+    u16 width;
+    u16 height;
+    u32 above;
+    u8 bare;
+} cip_event_window_configure_t;
 
 typedef struct CIP_ATTR_PACKED {
     u32 wid;
@@ -136,6 +148,7 @@ typedef union CIP_ATTR_PACKED {
     cip_event_window_destroy_t window_destroy;
     cip_event_window_show_t window_show;
     cip_event_window_hide_t window_hide;
+    cip_event_window_configure_t window_configure;
     cip_event_mouse_move_t mouse_move;
     cip_event_key_down_t key_down;
     cip_event_key_up_t key_up;

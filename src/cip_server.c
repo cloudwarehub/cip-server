@@ -281,6 +281,30 @@ void xorg_thread()
                 
                 break;
             }
+            case XCB_CONFIGURE_NOTIFY: {
+                xcb_configure_notify_event_t *cone = (xcb_configure_notify_event_t*)event;
+                //TODO: resize window stream
+                
+                /* add event to send list */
+                cip_event_window_configure_t *cewc = malloc(sizeof(cip_event_window_configure_t));
+                cewc->type = CIP_EVENT_WINDOW_CONFIGURE;
+                cewc->wid = cone->window;
+                cewc->x = cone->x;
+                cewc->y = cone->y;
+                cewc->width = cone->width;
+                cewc->height = cone->height;
+                cewc->bare = cone->override_redirect;
+                cewc->above = cone->above_sibling;
+                
+                wr = malloc(sizeof(write_req_t));
+                wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
+                wr->channel_type = CIP_CHANNEL_EVENT;
+                list_add_tail(&wr->list_node, event_list);
+                
+                /* inform uv thread */
+                uv_async_send(&async);
+                break;
+            }
             default:
                 if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
                     xcb_damage_notify_event_t *damage_event = (xcb_damage_notify_event_t*)event;
