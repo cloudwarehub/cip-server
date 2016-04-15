@@ -63,6 +63,10 @@ int get_size_by_type(enum CIP_EVENT type)
     switch (type) {
         case CIP_EVENT_MOUSE_MOVE:
             return sizeof(cip_event_mouse_move_t);
+        case CIP_EVENT_MOUSE_DOWN:
+            return sizeof(cip_event_mouse_down_t);
+        case CIP_EVENT_MOUSE_UP:
+            return sizeof(cip_event_mouse_up_t);
         case CIP_EVENT_KEY_DOWN:
             return sizeof(cip_event_key_down_t);
         case CIP_EVENT_KEY_UP:
