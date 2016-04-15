@@ -49,17 +49,19 @@ typedef struct {
 
 /* end master channel data types */
 
-#define CIP_KEY_CODE_MOUSE_LEFT 1
-#define CIP_KEY_CODE_MOUSE_RIGHT 2
+#define CIP_KEY_CODE_MOUSE_LEFT_DOWN 1
+#define CIP_KEY_CODE_MOUSE_LEFT_UP 2
 
 enum CIP_EVENT {
     CIP_EVENT_WINDOW_CREATE,
     CIP_EVENT_WINDOW_DESTROY,
     CIP_EVENT_WINDOW_SHOW,
     CIP_EVENT_WINDOW_HIDE,
-    CIP_EVENT_WINDOW_CONFIGURE,
+    CIP_EVENT_WINDOW_CONFIGURE = 4,
     CIP_EVENT_MOUSE_MOVE,
-    CIP_EVENT_KEY_DOWN,
+    CIP_EVENT_MOUSE_DOWN,
+    CIP_EVENT_MOUSE_UP,
+    CIP_EVENT_KEY_DOWN = 8,
     CIP_EVENT_KEY_UP,
     CIP_EVENT_WINDOW_MOVE,
     CIP_EVENT_WINDOW_RESIZE,
@@ -119,6 +121,18 @@ typedef struct CIP_ATTR_PACKED {
     u8 type;
     u32 wid;
     u8 code;
+} cip_event_mouse_down_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    u8 code;
+} cip_event_mouse_up_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+    u8 code;
 } cip_event_key_down_t;
 
 typedef struct CIP_ATTR_PACKED {
@@ -150,6 +164,8 @@ typedef union CIP_ATTR_PACKED {
     cip_event_window_hide_t window_hide;
     cip_event_window_configure_t window_configure;
     cip_event_mouse_move_t mouse_move;
+    cip_event_mouse_down_t mouse_down;
+    cip_event_mouse_up_t mouse_up;
     cip_event_key_down_t key_down;
     cip_event_key_up_t key_up;
     cip_event_window_move_t window_move;

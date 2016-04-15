@@ -75,26 +75,22 @@ void handle_event(cip_event_t *event)
         case CIP_EVENT_MOUSE_MOVE:
             xcb_warp_pointer(cip_context.xconn, XCB_NONE, event->mouse_move.wid, 0, 0, 0, 0, event->mouse_move.x, event->mouse_move.y);
             break;
-        case CIP_EVENT_KEY_DOWN:
-            if (event->key_down.code == CIP_KEY_CODE_MOUSE_LEFT) {
-                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, 1, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
-            } else if (event->key_down.code == CIP_KEY_CODE_MOUSE_RIGHT) {
-                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, 2, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
-            } else {
+        case CIP_EVENT_MOUSE_DOWN:
+            xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, event->mouse_down.code, XCB_CURRENT_TIME, event->mouse_down.wid, 0, 0, 0);
+            break;
+        case CIP_EVENT_MOUSE_UP:
+            xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, event->mouse_up.code, XCB_CURRENT_TIME, event->mouse_up.wid, 0, 0, 0);
+            break;
+        case CIP_EVENT_KEY_DOWN: {
                 uint8_t code = map_key_code(event->key_down.code);
                 xcb_test_fake_input(cip_context.xconn, XCB_KEY_PRESS, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
-            }
             break;
-        case CIP_EVENT_KEY_UP:
-            if (event->key_down.code == CIP_KEY_CODE_MOUSE_LEFT) {
-                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, 1, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
-            } else if (event->key_down.code == CIP_KEY_CODE_MOUSE_RIGHT) {
-                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, 2, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0);
-            } else {
+        }
+        case CIP_EVENT_KEY_UP: {
                 uint8_t code = map_key_code(event->key_down.code);
                 xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
-            }
             break;
+        }
         case CIP_EVENT_WINDOW_MOVE: {
             cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
             window->x = event->window_move.x;
