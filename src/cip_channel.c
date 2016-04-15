@@ -229,7 +229,7 @@ void cip_channel_handle(cip_channel_t *channel)
         } else if (channel->type == CIP_CHANNEL_EVENT) {
             uint8_t ev_type = *(char*)ringbuf_tail(channel->rx_ring);
             int expect_size = get_size_by_type(ev_type);
-            while (ringbuf_bytes_used(channel->rx_ring) > expect_size) {
+            while (ringbuf_bytes_used(channel->rx_ring) >= expect_size) {
                 cip_event_t event;
                 ringbuf_memcpy_from(&event, channel->rx_ring, expect_size);
                 
