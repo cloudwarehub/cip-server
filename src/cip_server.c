@@ -197,7 +197,9 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
                 wr->channel_type = CIP_CHANNEL_EVENT;
+                pthread_mutex_lock(&wr_list->mutex);
                 list_add_tail(&wr->list_node, event_list);
+                pthread_mutex_unlock(&wr_list->mutex);
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
@@ -223,7 +225,9 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewd, sizeof(*cewd));
                 wr->channel_type = CIP_CHANNEL_EVENT;
+                pthread_mutex_lock(&wr_list->mutex);
                 list_add_tail(&wr->list_node, event_list);
+                pthread_mutex_unlock(&wr_list->mutex);
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
@@ -254,7 +258,9 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cews, sizeof(*cews));
                 wr->channel_type = CIP_CHANNEL_EVENT;
+                pthread_mutex_lock(&wr_list->mutex);
                 list_add_tail(&wr->list_node, event_list);
+                pthread_mutex_unlock(&wr_list->mutex);
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
@@ -271,7 +277,9 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewh, sizeof(*cewh));
                 wr->channel_type = CIP_CHANNEL_EVENT;
+                pthread_mutex_lock(&wr_list->mutex);
                 list_add_tail(&wr->list_node, event_list);
+                pthread_mutex_unlock(&wr_list->mutex);
                 
                 /* inform uv thread */
                 uv_async_send(&async);
@@ -300,8 +308,10 @@ void xorg_thread()
                 wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init((char*)cewc, sizeof(*cewc));
                 wr->channel_type = CIP_CHANNEL_EVENT;
+                pthread_mutex_lock(&wr_list->mutex);
                 list_add_tail(&wr->list_node, event_list);
                 
+                pthread_mutex_unlock(&wr_list->mutex);
                 /* inform uv thread */
                 uv_async_send(&async);
                 break;
@@ -322,7 +332,7 @@ void emit_write(uv_async_t *handle)
 {
     write_req_list_t *wr_list = async.data;
     list_head_t *event_list = &wr_list->requests;
-    
+    pthread_mutex_lock(&wr_list->mutex);
     while (!list_empty(event_list)) {
         write_req_t *wr = list_entry(event_list->next, write_req_t, list_node);
         list_del(&wr->list_node);
@@ -347,6 +357,7 @@ void emit_write(uv_async_t *handle)
         free(wr->buf.base);
         free(wr);
     }
+    pthread_mutex_unlock(&wr_list->mutex);
 }
 
 void xorg_after(uv_work_t *req, int status)
