@@ -74,12 +74,15 @@ void handle_event(cip_event_t *event)
     switch (event->type) {
         case CIP_EVENT_MOUSE_MOVE:
             xcb_warp_pointer(cip_context.xconn, XCB_NONE, event->mouse_move.wid, 0, 0, 0, 0, event->mouse_move.x, event->mouse_move.y);
+            xcb_flush(cip_context.xconn);
             break;
         case CIP_EVENT_MOUSE_DOWN:
             xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_PRESS, event->mouse_down.code, XCB_CURRENT_TIME, event->mouse_down.wid, 0, 0, 0);
+            xcb_flush(cip_context.xconn);
             break;
         case CIP_EVENT_MOUSE_UP:
             xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, event->mouse_up.code, XCB_CURRENT_TIME, event->mouse_up.wid, 0, 0, 0);
+            xcb_flush(cip_context.xconn);
             break;
         case CIP_EVENT_KEY_DOWN: {
                 uint8_t code = map_key_code(event->key_down.code);
