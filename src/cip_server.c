@@ -147,7 +147,8 @@ void xorg_thread()
     xcb_connection_t *xconn;
     xcb_screen_t *screen;
     xcb_window_t root;
-    list_head_t *event_list = async.data;
+    write_req_list_t *wr_list = async.data;
+    list_head_t *event_list = &wr_list->requests;
     
     xconn = cip_context.xconn;
     const xcb_query_extension_reply_t *query_damage_reply = xcb_get_extension_data(xconn, &xcb_damage_id);
@@ -319,7 +320,9 @@ void xorg_thread()
 
 void emit_write(uv_async_t *handle)
 {
-    list_head_t *event_list = async.data;
+    write_req_list_t *wr_list = async.data;
+    list_head_t *event_list = &wr_list->requests;
+    
     while (!list_empty(event_list)) {
         write_req_t *wr = list_entry(event_list->next, write_req_t, list_node);
         list_del(&wr->list_node);
@@ -400,8 +403,10 @@ int main(int argc, char *argv[])
     uv_work_t req;
     
     /* async.data is a write request list */
-    async.data = malloc(sizeof(list_head_t));
-    INIT_LIST_HEAD((list_head_t*)async.data);
+    async.data = malloc(sizeof(write_req_list_t));
+    write_req_list_t *tmp = async.data;
+    pthread_mutex_init(&tmp->mutex, NULL);
+    INIT_LIST_HEAD(&tmp->requests);
     list_head_t *write_list = malloc(sizeof(list_head_t));
     INIT_LIST_HEAD(write_list);
     req.data = write_list;

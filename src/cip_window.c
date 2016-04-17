@@ -238,7 +238,9 @@ void cip_window_frame_send(int wid, int force_keyframe)
                 write_req_t *wr = malloc(sizeof(write_req_t));
                 wr->buf = uv_buf_init(buf, length);
                 wr->channel_type = CIP_CHANNEL_DISPLAY;
-                list_head_t *event_list = async.data;
+                
+                write_req_list_t *wr_list = async.data;
+                list_head_t *event_list = &wr_list->requests;
                 list_add_tail(&wr->list_node, event_list);
                 
                 /* inform uv thread */

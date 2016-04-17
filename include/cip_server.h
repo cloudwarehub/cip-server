@@ -29,6 +29,11 @@ typedef struct {
     uv_buf_t buf;
 } write_req_t;
 
+typedef struct {
+    list_head_t requests;
+    pthread_mutex_t mutex;
+} write_req_list_t;
+
 void after_write(uv_write_t *req, int status);
 
 #endif /* cip_server_h */
