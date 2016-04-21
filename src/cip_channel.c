@@ -91,7 +91,7 @@ void handle_event(cip_event_t *event)
         }
         case CIP_EVENT_KEY_UP: {
                 uint8_t code = map_key_code(event->key_down.code);
-                xcb_test_fake_input(cip_context.xconn, XCB_BUTTON_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+                xcb_test_fake_input(cip_context.xconn, XCB_KEY_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
             break;
         }
         case CIP_EVENT_WINDOW_MOVE: {
