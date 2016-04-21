@@ -85,13 +85,15 @@ void handle_event(cip_event_t *event)
             xcb_flush(cip_context.xconn);
             break;
         case CIP_EVENT_KEY_DOWN: {
-                uint8_t code = map_key_code(event->key_down.code);
-                xcb_test_fake_input(cip_context.xconn, XCB_KEY_PRESS, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            uint8_t code = map_key_code(event->key_down.code);
+            xcb_test_fake_input(cip_context.xconn, XCB_KEY_PRESS, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            xcb_flush(cip_context.xconn);
             break;
         }
         case CIP_EVENT_KEY_UP: {
-                uint8_t code = map_key_code(event->key_down.code);
-                xcb_test_fake_input(cip_context.xconn, XCB_KEY_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            uint8_t code = map_key_code(event->key_down.code);
+            xcb_test_fake_input(cip_context.xconn, XCB_KEY_RELEASE, code, XCB_CURRENT_TIME, event->key_down.wid, 0, 0, 0 );
+            xcb_flush(cip_context.xconn);
             break;
         }
         case CIP_EVENT_WINDOW_MOVE: {
