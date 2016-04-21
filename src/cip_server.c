@@ -203,7 +203,7 @@ void xorg_thread()
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
-                sleep(1);
+                
                 break;
             }
             case XCB_DESTROY_NOTIFY:;
@@ -266,7 +266,7 @@ void xorg_thread()
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
-                usleep(500);
+                
                 break;
             }
             case XCB_UNMAP_NOTIFY:;
