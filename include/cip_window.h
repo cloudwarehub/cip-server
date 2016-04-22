@@ -29,6 +29,11 @@ typedef struct {
     uint16_t even_width;
     uint16_t even_height;
     uv_mutex_t streamlock;
+    pthread_mutex_t mutex;
+    int stream_ready;
+    // uv_async_t async;
+    // uv_work_t h264_thread;
+    // uv_loop_t *thread_loop;
 } cip_window_t;
 
 void cip_window_frame_send(int wid, int force_keyframe);

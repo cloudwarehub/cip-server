@@ -183,7 +183,10 @@ void xorg_thread()
                 cip_window->viewable = 0;
                 cip_window->width = e->width;
                 cip_window->height = e->height;
+                cip_window->stream_ready = 0;
+                //uv_async_init(loop, &cip_window->async, send_frame);
                 cip_window_stream_init(cip_window);
+                cip_window->stream_ready = 1;
                 
                 /* add event to send list */
                 cip_event_window_create_t *cewc = malloc(sizeof(cip_event_window_create_t));
