@@ -120,6 +120,11 @@ void handle_event(cip_event_t *event)
             xcb_destroy_window(cip_context.xconn, window->wid);
             break;
         }
+        case CIP_EVENT_WINDOW_SHOW_READY: {
+            cip_window_t *window = find_window(event->window_frame_listen.wid, &cip_context.windows);
+            cip_window_frame_send(window->wid, 1);
+            break;
+        }
         default:
             break;
     }

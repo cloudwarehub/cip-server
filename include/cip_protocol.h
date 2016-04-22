@@ -65,6 +65,9 @@ enum CIP_EVENT {
     CIP_EVENT_KEY_UP,
     CIP_EVENT_WINDOW_MOVE,
     CIP_EVENT_WINDOW_RESIZE,
+    CIP_EVENT_WINDOW_FRAME_LISTEN = 12,
+    CIP_EVENT_WINDOW_FRAME_UNLISTEN,
+    CIP_EVENT_WINDOW_SHOW_READY,
 };
 
 typedef struct CIP_ATTR_PACKED {
@@ -155,6 +158,21 @@ typedef struct CIP_ATTR_PACKED {
     u16 height;
 } cip_event_window_resize_t;
 
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+} cip_event_window_frame_listen_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+} cip_event_window_frame_unlisten_t;
+
+typedef struct CIP_ATTR_PACKED {
+    u8 type;
+    u32 wid;
+} cip_event_window_show_ready_t;
+
 
 typedef union CIP_ATTR_PACKED {
     u8 type;
@@ -170,6 +188,9 @@ typedef union CIP_ATTR_PACKED {
     cip_event_key_up_t key_up;
     cip_event_window_move_t window_move;
     cip_event_window_resize_t window_resize;
+    cip_event_window_frame_listen_t window_frame_listen;
+    cip_event_window_frame_unlisten_t window_frame_unlisten;
+    cip_event_window_show_ready_t window_show_ready;
 } cip_event_t;
 
 
