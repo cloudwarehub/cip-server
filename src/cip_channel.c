@@ -102,6 +102,7 @@ void handle_event(cip_event_t *event)
             window->y = event->window_move.y;
             u32 values[] = {window->x, window->y};
             xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, values);
+            xcb_flush(cip_context.xconn);
             break;
         }
         case CIP_EVENT_WINDOW_RESIZE: {
@@ -110,7 +111,7 @@ void handle_event(cip_event_t *event)
             window->height = event->window_resize.height;
             u32 values[] = {window->width, window->height};
             xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
-            
+            xcb_flush(cip_context.xconn);
             /* h264 stream resize */
             cip_window_stream_reset(window);
             break;
