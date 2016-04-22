@@ -314,6 +314,16 @@ void xorg_thread()
                 list_add_tail(&wr->list_node, event_list);
                 pthread_mutex_unlock(&wr_list->mutex);
                 
+                /* reset cip window stream */
+                cip_window_t *iter;
+                list_for_each_entry(iter, &cip_context.windows, list_node) {
+                    if (iter->wid == cone->window) {
+                        cip_window_stream_reset(iter);
+                        break;
+                    }
+                }
+                
+                
                 /* inform uv thread */
                 uv_async_send(&async);
                 break;
