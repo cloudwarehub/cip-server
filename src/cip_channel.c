@@ -124,8 +124,10 @@ void handle_event(cip_event_t *event)
         case CIP_EVENT_WINDOW_SHOW_READY: {
             cip_window_t *window = find_window(event->window_show_ready.wid, &cip_context.windows);
             //cip_window_stream_reset(window);
-            while(!window->stream_ready){usleep(300);}
-            cip_window_frame_send(window->wid, 1);
+            if (window) {
+                while(!window->stream_ready){usleep(300);}
+                cip_window_frame_send(window->wid, 1);
+            }
             break;
         }
         default:
