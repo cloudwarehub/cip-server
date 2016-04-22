@@ -199,7 +199,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
                 printf("get image error\n");
                 return;
             }
-            printf("length:%d width:%d,height:%d\n",xcb_get_image_data_length(img),width,height);
+            //printf("length:%d width:%d,height:%d\n",xcb_get_image_data_length(img),width,height);
             
             
             ARGBToI420(xcb_get_image_data(img), width * 4,
@@ -207,7 +207,6 @@ void cip_window_frame_send(int wid, int force_keyframe)
                        pic->img.plane[1], width / 2,
                        pic->img.plane[2], width / 2,
                        width, height );
-            printf("b\n");
             free(img);
             
             if (force_keyframe) {
@@ -215,20 +214,18 @@ void cip_window_frame_send(int wid, int force_keyframe)
             }
             pic->i_pts = window->i_frame++;
             
-            printf("cc\n");
             i_frame_size = x264_encoder_encode(window->encoder, &nal, &i_nal, &window->pic, &picout);
-            printf("d\n");
             if (i_frame_size < 0) {
                 printf("[Error] x265_encoder_encode\n");
                 return;
             }
-            printf("i_frame_size:%d\n", i_frame_size);
+            //printf("i_frame_size:%d\n", i_frame_size);
             int i;
             for (i = 0; i < i_nal; ++i) {
                 /* broadcast event */
                 int length = sizeof(cip_event_window_frame_t) + nal[i].i_payload;
                 char *buf = malloc(length);
-                printf("nal length:%d\n", length);
+                //printf("nal length:%d\n", length);
                 cip_event_window_frame_t *p = (cip_event_window_frame_t*)buf;
                 p->wid = window->wid;
                 p->length = nal[i].i_payload;
