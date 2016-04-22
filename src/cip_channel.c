@@ -58,7 +58,7 @@ void recover_state(cip_channel_t *channel)
         }
     } else if (channel->type == CIP_CHANNEL_DISPLAY) {
         list_for_each_entry(iter, &cip_context.windows, list_node) {
-            cip_window_stream_reset(iter);
+            cip_window_frame_send(iter->wid, 1);
         }
     }
     
@@ -125,7 +125,7 @@ void handle_event(cip_event_t *event)
             cip_window_t *window = find_window(event->window_show_ready.wid, &cip_context.windows);
             //cip_window_stream_reset(window);
             if (window) {
-                while(!window->stream_ready){usleep(300);}
+                while(!window->stream_ready){usleep(50);}
                 cip_window_frame_send(window->wid, 1);
             }
             break;
