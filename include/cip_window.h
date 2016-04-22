@@ -28,7 +28,7 @@ typedef struct {
     uint16_t height;
     uint16_t even_width;
     uint16_t even_height;
-    uv_rwlock_t streamlock;
+    uv_mutex_t streamlock;
 } cip_window_t;
 
 void cip_window_frame_send(int wid, int force_keyframe);

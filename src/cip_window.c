@@ -125,7 +125,7 @@ int cip_window_stream_init(cip_window_t *window)
     window->even_width = width;
     window->even_height = height;
     
-    uv_rwlock_init(&window->streamlock);
+    uv_mutex_init(&window->streamlock);
     
     if (height < 4 || width < 4) { /* image is too small to stream */
         return 1;
@@ -184,7 +184,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
             if (window->width < 4 || window->height < 4) { /* too small */
                 return;
             }
-            uv_rwlock_wrlock(&window->streamlock);
+            uv_mutex_lock(&window->streamlock);
             int width = window->even_width;
             int height = window->even_height;
             x264_picture_t *pic = &window->pic;
@@ -199,7 +199,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
                                                     0, 0, window->even_width, window->even_height, ~0 ), NULL);
             if ( img == NULL ) {// often coursed by GL window
                 printf("get image error\n");
-                uv_rwlock_wrunlock(&window->streamlock);
+                uv_mutex_unlock(&window->streamlock);
                 return;
             }
             //printf("length:%d width:%d,height:%d\n",xcb_get_image_data_length(img),width,height);
@@ -220,7 +220,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
             i_frame_size = x264_encoder_encode(window->encoder, &nal, &i_nal, &window->pic, &picout);
             if (i_frame_size < 0) {
                 printf("[Error] x265_encoder_encode\n");
-                uv_rwlock_wrunlock(&window->streamlock);
+                uv_mutex_unlock(&window->streamlock);
                 return;
             }
             //printf("i_frame_size:%d\n", i_frame_size);
@@ -252,7 +252,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
                 
             }
             pic->i_type = X264_TYPE_AUTO;
-            uv_rwlock_wrunlock(&window->streamlock);
+            uv_mutex_unlock(&window->streamlock);
             
             break;
         }
