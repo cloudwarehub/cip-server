@@ -52,6 +52,8 @@ int event_len(cip_event_t *event)
         case CIP_EVENT_WINDOW_HIDE:
             return sizeof(cip_event_window_hide_t);
             break;
+        case CIP_EVENT_WINDOW_SHOW_READY:
+            return sizeof(cip_event_window_show_ready_t);
         default:
             break;
     }
