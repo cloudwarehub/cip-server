@@ -211,7 +211,6 @@ void cip_window_frame_send(int wid, int force_keyframe)
             
             if (force_keyframe) {
                 pic->i_type = X264_TYPE_KEYFRAME;
-                window->i_frame = 0;
             }
             pic->i_pts = window->i_frame++;
             
