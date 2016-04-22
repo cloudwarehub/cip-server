@@ -75,7 +75,8 @@ int get_size_by_type(enum CIP_EVENT type)
             return sizeof(cip_event_window_move_t);
         case CIP_EVENT_WINDOW_RESIZE:
             return sizeof(cip_event_window_resize_t);
-            
+        case CIP_EVENT_WINDOW_SHOW_READY:
+            return sizeof(cip_event_window_show_ready_t);
         default:
             return 0;
     }
