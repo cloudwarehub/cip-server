@@ -232,7 +232,6 @@ void xorg_thread()
                 
                 /* inform uv thread to send event */
                 uv_async_send(&async);
-                usleep(500);
                 break;
             case XCB_MAP_NOTIFY:{
                 xcb_map_notify_event_t *e = (xcb_map_notify_event_t*)event;
