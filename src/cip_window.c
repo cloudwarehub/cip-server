@@ -143,7 +143,7 @@ int cip_window_stream_init(cip_window_t *window)
     param->b_vfr_input = 0;
     param->b_repeat_headers = 1;
     param->b_annexb = 1;
-    param->rc.f_rf_constant = 24;
+    param->rc.f_rf_constant = 20;
     
     if (x264_param_apply_profile(param, "baseline" ) < 0) {
         printf("[Error] x264_param_apply_profile\n");
