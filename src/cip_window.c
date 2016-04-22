@@ -182,7 +182,7 @@ void cip_window_frame_send(int wid, int force_keyframe)
             if (window->width < 4 || window->height < 4) { /* too small */
                 return;
             }
-            uv_rwlock_wrlock(&window->numlock);
+            
             int width = window->even_width;
             int height = window->even_height;
             x264_picture_t *pic = &window->pic;
@@ -252,7 +252,6 @@ void cip_window_frame_send(int wid, int force_keyframe)
             }
             pic->i_type = X264_TYPE_AUTO;
             
-            uv_rwlock_wrunlock(&window->numlock);
             break;
         }
     }
