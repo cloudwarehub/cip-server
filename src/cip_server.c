@@ -318,6 +318,11 @@ void xorg_thread()
                 cip_window_t *iter;
                 list_for_each_entry(iter, &cip_context.windows, list_node) {
                     if (iter->wid == cone->window) {
+                        iter->x = cone->x;
+                        iter->y = cone->y;
+                        iter->width = cone->width;
+                        iter->height = cone->height;
+                        iter->bare = cone->override_redirect;
                         cip_window_stream_reset(iter);
                         break;
                     }
