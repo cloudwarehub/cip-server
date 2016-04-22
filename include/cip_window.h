@@ -10,6 +10,7 @@
 #define cip_window_h
 
 #include <x264.h>
+#include <uv.h>
 #include "list.h"
 
 typedef struct {
@@ -27,6 +28,7 @@ typedef struct {
     uint16_t height;
     uint16_t even_width;
     uint16_t even_height;
+    uv_rwlock_t numlock;
 } cip_window_t;
 
 void cip_window_frame_send(int wid, int force_keyframe);
