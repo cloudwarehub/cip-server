@@ -322,10 +322,12 @@ void xorg_thread()
                     if (iter->wid == cone->window) {
                         iter->x = cone->x;
                         iter->y = cone->y;
-                        iter->width = cone->width;
-                        iter->height = cone->height;
                         iter->bare = cone->override_redirect;
-                        cip_window_stream_reset(iter);
+                        if (iter->width != cewc->width || iter->height != cewc->height) {
+                            iter->width = cone->width;
+                            iter->height = cone->height;
+                            cip_window_stream_reset(iter);
+                        }
                         break;
                     }
                 }
