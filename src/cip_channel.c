@@ -102,8 +102,8 @@ void handle_event(cip_event_t *event)
             window->x = event->window_move.x;
             window->y = event->window_move.y;
             u32 values[] = {window->x, window->y};
-            xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, values);
-            xcb_flush(cip_context.xconn);
+            // xcb_configure_window(cip_context.xconn, window->wid, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, values);
+            // xcb_flush(cip_context.xconn);
             break;
         }
         case CIP_EVENT_WINDOW_RESIZE: {

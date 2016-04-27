@@ -297,7 +297,6 @@ void xorg_thread()
             }
             case XCB_CONFIGURE_NOTIFY: {
                 xcb_configure_notify_event_t *cone = (xcb_configure_notify_event_t*)event;
-                //TODO: resize window stream
                 
                 /* add event to send list */
                 cip_event_window_configure_t *cewc = malloc(sizeof(cip_event_window_configure_t));
