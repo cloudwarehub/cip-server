@@ -58,7 +58,8 @@ void recover_state(cip_channel_t *channel)
         }
     } else if (channel->type == CIP_CHANNEL_DISPLAY) {
         list_for_each_entry(iter, &cip_context.windows, list_node) {
-            //cip_window_frame_send(iter->wid, 1);
+            if (iter->viewable)
+                cip_window_frame_send(iter->wid, 1);
         }
     }
     
@@ -203,7 +204,7 @@ void cip_channel_handle(cip_channel_t *channel)
                 channel->type = CIP_CHANNEL_EVENT;
                 
                 /* recover window state on channel established */
-                // recover_state(channel); // do not recover_state at this point, because display_channel is not connected
+                recover_state(channel); //TODO: do not recover_state at this point, because display_channel is not connected
                 break;
                 
             case CIP_CHANNEL_DISPLAY:
@@ -230,7 +231,7 @@ void cip_channel_handle(cip_channel_t *channel)
                 channel->type = CIP_CHANNEL_DISPLAY;
                 
                 /* recover display info */
-                recover_state(channel->session->event_channel);
+                //recover_state(channel->session->event_channel);
                 recover_state(channel);
 
                 break;
