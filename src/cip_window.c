@@ -125,7 +125,6 @@ int cip_window_stream_init(cip_window_t *window)
     window->even_width = width;
     window->even_height = height;
     
-    uv_mutex_init(&window->streamlock);
     
     if (height < 4 || width < 4) { /* image is too small to stream */
         return 1;
@@ -169,9 +168,11 @@ fail2:
 
 void cip_window_stream_reset(cip_window_t *window)
 {
+    uv_mutex_lock(&window->streamlock);
     x264_picture_clean(&window->pic);
     x264_encoder_close(window->encoder);
     cip_window_stream_init(window);
+    uv_mutex_unlock(&window->streamlock);
 }
 
 void cip_window_frame_send(int wid, int force_keyframe)

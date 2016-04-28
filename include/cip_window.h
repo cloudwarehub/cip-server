@@ -31,6 +31,7 @@ typedef struct {
     uv_mutex_t streamlock;
     pthread_mutex_t mutex;
     int stream_ready;
+    
     // uv_async_t async;
     // uv_work_t h264_thread;
     // uv_loop_t *thread_loop;

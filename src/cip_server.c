@@ -185,6 +185,8 @@ void xorg_thread()
                 cip_window->height = e->height;
                 cip_window->stream_ready = 0;
                 //uv_async_init(loop, &cip_window->async, send_frame);
+                
+                uv_mutex_init(&cip_window->streamlock);
                 cip_window_stream_init(cip_window);
                 cip_window->stream_ready = 1;
                 
