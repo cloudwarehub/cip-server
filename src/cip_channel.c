@@ -99,6 +99,9 @@ void handle_event(cip_event_t *event)
         }
         case CIP_EVENT_WINDOW_MOVE: {
             cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
+            if (!window) {
+                break;
+            }
             window->x = event->window_move.x;
             window->y = event->window_move.y;
             u32 values[] = {window->x, window->y};
@@ -108,6 +111,9 @@ void handle_event(cip_event_t *event)
         }
         case CIP_EVENT_WINDOW_RESIZE: {
             cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
+            if (!window) {
+                break;
+            }
             window->width = event->window_resize.width;
             window->height = event->window_resize.height;
             u32 values[] = {window->width, window->height};
@@ -119,6 +125,9 @@ void handle_event(cip_event_t *event)
         }
         case CIP_EVENT_WINDOW_DESTROY: {
             cip_window_t *window = find_window(event->window_move.wid, &cip_context.windows);
+            if (!window) {
+                break;
+            }
             xcb_destroy_window(cip_context.xconn, window->wid);
             break;
         }
