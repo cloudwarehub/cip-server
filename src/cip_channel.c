@@ -58,8 +58,10 @@ void recover_state(cip_channel_t *channel)
         }
     } else if (channel->type == CIP_CHANNEL_DISPLAY) {
         list_for_each_entry(iter, &cip_context.windows, list_node) {
-            if (iter->viewable)
-                cip_window_frame_send(iter->wid, 1);
+            if (iter->viewable) {
+                iter->force_keyframe = 1;
+                uv_async_send(&iter->async);
+            }
         }
     }
     
@@ -136,7 +138,8 @@ void handle_event(cip_event_t *event)
             //cip_window_stream_reset(window);
             if (window) {
                 while(!window->stream_ready){usleep(50);}
-                cip_window_frame_send(window->wid, 1);
+                window->force_keyframe = 1;
+                uv_async_send(&window->async);
             }
             break;
         }

@@ -20,7 +20,7 @@
 char *cip_session_test = "cloudwarehub";
 cip_context_t cip_context;
     
-uv_loop_t *loop;
+
 uv_async_t async;
 
 /* default cip port */
@@ -111,7 +111,7 @@ void connection_cb(uv_stream_t *server, int status)
     }
 
     uv_tcp_t *client = (uv_tcp_t*) malloc(sizeof(uv_tcp_t));
-    uv_tcp_init(loop, client);
+    uv_tcp_init(cip_context.loop, client);
 
     if (uv_accept(server, (uv_stream_t*)client) == 0) {
         /* create cip_channel_t and read connect msg from client */
@@ -342,7 +342,14 @@ void xorg_thread()
             default:
                 if (event->response_type == query_damage_reply->first_event + XCB_DAMAGE_NOTIFY) {
                     xcb_damage_notify_event_t *damage_event = (xcb_damage_notify_event_t*)event;
-                    cip_window_frame_send(damage_event->drawable, 0);
+                    
+                    cip_window_t *iter;
+                    list_for_each_entry(iter, &cip_context.windows, list_node) {
+                        if (iter->wid == damage_event->drawable) {
+                            uv_async_send(&iter->async);
+                            break;
+                        }
+                    }
                     xcb_damage_subtract(xconn, damage_event->damage, XCB_NONE, XCB_NONE);
                 }
                 break;
@@ -431,7 +438,7 @@ int main(int argc, char *argv[])
     uv_tcp_t tcp_server;
     struct sockaddr_in addr;
     int r;
-    
+    uv_loop_t *loop = cip_context.loop;
     loop = uv_default_loop();
     
     /* start xorg thread */

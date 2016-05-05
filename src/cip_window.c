@@ -40,39 +40,39 @@ static __inline int RGBToV(uint8 r, uint8 g, uint8 b) {
 }
 
 #define MAKEROWY(NAME, R, G, B, BPP) \
-void NAME ## ToYRow_C(const uint8* src_argb0, uint8* dst_y, int width) {       \
-int x;                                                                       \
-for (x = 0; x < width; ++x) {                                                \
-dst_y[0] = RGBToY(src_argb0[R], src_argb0[G], src_argb0[B]);               \
-src_argb0 += BPP;                                                          \
-dst_y += 1;                                                                \
-}                                                                            \
-}                                                                              \
-void NAME ## ToUVRow_C(const uint8* src_rgb0, int src_stride_rgb,              \
-uint8* dst_u, uint8* dst_v, int width) {                \
-const uint8* src_rgb1 = src_rgb0 + src_stride_rgb;                           \
-int x;                                                                       \
-for (x = 0; x < width - 1; x += 2) {                                         \
-uint8 ab = (src_rgb0[B] + src_rgb0[B + BPP] +                              \
-src_rgb1[B] + src_rgb1[B + BPP]) >> 2;                          \
-uint8 ag = (src_rgb0[G] + src_rgb0[G + BPP] +                              \
-src_rgb1[G] + src_rgb1[G + BPP]) >> 2;                          \
-uint8 ar = (src_rgb0[R] + src_rgb0[R + BPP] +                              \
-src_rgb1[R] + src_rgb1[R + BPP]) >> 2;                          \
-dst_u[0] = RGBToU(ar, ag, ab);                                             \
-dst_v[0] = RGBToV(ar, ag, ab);                                             \
-src_rgb0 += BPP * 2;                                                       \
-src_rgb1 += BPP * 2;                                                       \
-dst_u += 1;                                                                \
-dst_v += 1;                                                                \
-}                                                                            \
-if (width & 1) {                                                             \
-uint8 ab = (src_rgb0[B] + src_rgb1[B]) >> 1;                               \
-uint8 ag = (src_rgb0[G] + src_rgb1[G]) >> 1;                               \
-uint8 ar = (src_rgb0[R] + src_rgb1[R]) >> 1;                               \
-dst_u[0] = RGBToU(ar, ag, ab);                                             \
-dst_v[0] = RGBToV(ar, ag, ab);                                             \
-}                                                                            \
+    void NAME ## ToYRow_C(const uint8* src_argb0, uint8* dst_y, int width) {       \
+    int x;                                                                       \
+        for (x = 0; x < width; ++x) {                                                \
+            dst_y[0] = RGBToY(src_argb0[R], src_argb0[G], src_argb0[B]);               \
+            src_argb0 += BPP;                                                          \
+            dst_y += 1;                                                                \
+        }                                                                            \
+    }                                                                              \
+    void NAME ## ToUVRow_C(const uint8* src_rgb0, int src_stride_rgb,              \
+    uint8* dst_u, uint8* dst_v, int width) {                \
+        const uint8* src_rgb1 = src_rgb0 + src_stride_rgb;                           \
+        int x;                                                                       \
+        for (x = 0; x < width - 1; x += 2) {                                         \
+        uint8 ab = (src_rgb0[B] + src_rgb0[B + BPP] +                              \
+        src_rgb1[B] + src_rgb1[B + BPP]) >> 2;                          \
+        uint8 ag = (src_rgb0[G] + src_rgb0[G + BPP] +                              \
+        src_rgb1[G] + src_rgb1[G + BPP]) >> 2;                          \
+        uint8 ar = (src_rgb0[R] + src_rgb0[R + BPP] +                              \
+        src_rgb1[R] + src_rgb1[R + BPP]) >> 2;                          \
+        dst_u[0] = RGBToU(ar, ag, ab);                                             \
+        dst_v[0] = RGBToV(ar, ag, ab);                                             \
+        src_rgb0 += BPP * 2;                                                       \
+        src_rgb1 += BPP * 2;                                                       \
+        dst_u += 1;                                                                \
+        dst_v += 1;                                                                \
+    }                                                                            \
+    if (width & 1) {                                                             \
+        uint8 ab = (src_rgb0[B] + src_rgb1[B]) >> 1;                               \
+        uint8 ag = (src_rgb0[G] + src_rgb1[G]) >> 1;                               \
+        uint8 ar = (src_rgb0[R] + src_rgb1[R]) >> 1;                               \
+        dst_u[0] = RGBToU(ar, ag, ab);                                             \
+        dst_v[0] = RGBToV(ar, ag, ab);                                             \
+    }                                                                            \
 }
 
 MAKEROWY(ARGB, 2, 1, 0, 4)
@@ -117,6 +117,9 @@ int ARGBToI420(const uint8_t* src_argb, int src_stride_argb,
 
 int cip_window_stream_init(cip_window_t *window)
 {
+    window->async.data = window;
+    uv_async_init(cip_context.loop, &window->async, cip_window_frame_send);
+    
     uint16_t width = window->width;
     uint16_t height = window->height;
     
@@ -175,87 +178,86 @@ void cip_window_stream_reset(cip_window_t *window)
     uv_mutex_unlock(&window->streamlock);
 }
 
-void cip_window_frame_send(int wid, int force_keyframe)
+void cip_window_frame_send(uv_async_t *handle)
 {
     
     
-    cip_window_t *window;
-    list_for_each_entry(window, &cip_context.windows, list_node) {
-        if (window->wid == wid) {
-            if (window->width < 4 || window->height < 4) { /* too small */
-                return;
-            }
-            uv_mutex_lock(&window->streamlock);
-            int width = window->even_width;
-            int height = window->even_height;
-            x264_picture_t *pic = &window->pic;
-            x264_picture_t picout;
-            int i_frame_size;
-            x264_nal_t *nal = NULL;
-            int32_t i_nal = 0;
-            
-            xcb_get_image_reply_t *img;
-            img = xcb_get_image_reply(cip_context.xconn,
-                                      xcb_get_image(cip_context.xconn, XCB_IMAGE_FORMAT_Z_PIXMAP, window->wid,
-                                                    0, 0, window->even_width, window->even_height, ~0 ), NULL);
-            if ( img == NULL ) {// often coursed by GL window
-                printf("get image error\n");
-                uv_mutex_unlock(&window->streamlock);
-                return;
-            }
-            //printf("length:%d width:%d,height:%d\n",xcb_get_image_data_length(img),width,height);
-            
-            
-            ARGBToI420(xcb_get_image_data(img), width * 4,
-                       pic->img.plane[0], width,
-                       pic->img.plane[1], width / 2,
-                       pic->img.plane[2], width / 2,
-                       width, height );
-            free(img);
-            
-            if (force_keyframe) {
-                pic->i_type = X264_TYPE_KEYFRAME;
-            }
-            pic->i_pts = window->i_frame++;
-            
-            i_frame_size = x264_encoder_encode(window->encoder, &nal, &i_nal, &window->pic, &picout);
-            if (i_frame_size < 0) {
-                printf("[Error] x265_encoder_encode\n");
-                uv_mutex_unlock(&window->streamlock);
-                return;
-            }
-            //printf("i_frame_size:%d\n", i_frame_size);
-            int i;
-            for (i = 0; i < i_nal; ++i) {
-                /* broadcast event */
-                int length = sizeof(cip_event_window_frame_t) + nal[i].i_payload;
-                char *buf = malloc(length);
-                //printf("nal length:%d\n", length);
-                cip_event_window_frame_t *p = (cip_event_window_frame_t*)buf;
-                p->wid = window->wid;
-                p->length = nal[i].i_payload;
-                memcpy(buf + sizeof(cip_event_window_frame_t), nal[i].p_payload, nal[i].i_payload);
-                
-                
-                /* add event to send list */
-                write_req_t *wr = malloc(sizeof(write_req_t));
-                wr->buf = uv_buf_init(buf, length);
-                wr->channel_type = CIP_CHANNEL_DISPLAY;
-                
-                write_req_list_t *wr_list = async.data;
-                list_head_t *event_list = &wr_list->requests;
-                pthread_mutex_lock(&wr_list->mutex);
-                list_add_tail(&wr->list_node, event_list);
-                pthread_mutex_unlock(&wr_list->mutex);
-                
-                /* inform uv thread */
-                uv_async_send(&async);
-                
-            }
-            pic->i_type = X264_TYPE_AUTO;
-            uv_mutex_unlock(&window->streamlock);
-            
-            break;
-        }
+    cip_window_t *window = handle->data;
+    int force_keyframe = window->force_keyframe;
+    
+    if (window->width < 4 || window->height < 4) { /* too small */
+        return;
     }
+    uv_mutex_lock(&window->streamlock);
+    int width = window->even_width;
+    int height = window->even_height;
+    x264_picture_t *pic = &window->pic;
+    x264_picture_t picout;
+    int i_frame_size;
+    x264_nal_t *nal = NULL;
+    int32_t i_nal = 0;
+    
+    xcb_get_image_reply_t *img;
+    img = xcb_get_image_reply(cip_context.xconn,
+                              xcb_get_image(cip_context.xconn, XCB_IMAGE_FORMAT_Z_PIXMAP, window->wid,
+                                            0, 0, window->even_width, window->even_height, ~0 ), NULL);
+    if ( img == NULL ) {// often coursed by GL window
+        printf("get image error\n");
+        uv_mutex_unlock(&window->streamlock);
+        return;
+    }
+    //printf("length:%d width:%d,height:%d\n",xcb_get_image_data_length(img),width,height);
+    
+    
+    ARGBToI420(xcb_get_image_data(img), width * 4,
+               pic->img.plane[0], width,
+               pic->img.plane[1], width / 2,
+               pic->img.plane[2], width / 2,
+               width, height );
+    free(img);
+    
+    if (force_keyframe) {
+        pic->i_type = X264_TYPE_KEYFRAME;
+        window->force_keyframe = 0;
+    }
+    pic->i_pts = window->i_frame++;
+    
+    i_frame_size = x264_encoder_encode(window->encoder, &nal, &i_nal, &window->pic, &picout);
+    if (i_frame_size < 0) {
+        printf("[Error] x265_encoder_encode\n");
+        uv_mutex_unlock(&window->streamlock);
+        return;
+    }
+    //printf("i_frame_size:%d\n", i_frame_size);
+    int i;
+    for (i = 0; i < i_nal; ++i) {
+        /* broadcast event */
+        int length = sizeof(cip_event_window_frame_t) + nal[i].i_payload;
+        char *buf = malloc(length);
+        //printf("nal length:%d\n", length);
+        cip_event_window_frame_t *p = (cip_event_window_frame_t*)buf;
+        p->wid = window->wid;
+        p->length = nal[i].i_payload;
+        memcpy(buf + sizeof(cip_event_window_frame_t), nal[i].p_payload, nal[i].i_payload);
+        
+        
+        /* add event to send list */
+        write_req_t *wr = malloc(sizeof(write_req_t));
+        wr->buf = uv_buf_init(buf, length);
+        wr->channel_type = CIP_CHANNEL_DISPLAY;
+        
+        write_req_list_t *wr_list = async.data;
+        list_head_t *event_list = &wr_list->requests;
+        pthread_mutex_lock(&wr_list->mutex);
+        list_add_tail(&wr->list_node, event_list);
+        pthread_mutex_unlock(&wr_list->mutex);
+        
+        /* inform uv thread */
+        uv_async_send(&async);
+        
+    }
+    pic->i_type = X264_TYPE_AUTO;
+    uv_mutex_unlock(&window->streamlock);
+            
+       
 }

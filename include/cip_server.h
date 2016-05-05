@@ -19,6 +19,7 @@ typedef struct {
     list_head_t sessions;
     list_head_t windows;
     xcb_connection_t *xconn;
+    uv_loop_t *loop;
 } cip_context_t;
 
 typedef struct {

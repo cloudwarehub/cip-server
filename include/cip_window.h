@@ -32,12 +32,13 @@ typedef struct {
     pthread_mutex_t mutex;
     int stream_ready;
     
-    // uv_async_t async;
-    // uv_work_t h264_thread;
+    uv_async_t async;
+    int force_keyframe;
+    //uv_work_t stream_thread;
     // uv_loop_t *thread_loop;
 } cip_window_t;
 
-void cip_window_frame_send(int wid, int force_keyframe);
+void cip_window_frame_send(uv_async_t *async);
 int cip_window_stream_init(cip_window_t *window);
 void cip_window_stream_reset(cip_window_t *window);
 
