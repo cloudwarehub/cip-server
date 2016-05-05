@@ -438,8 +438,9 @@ int main(int argc, char *argv[])
     uv_tcp_t tcp_server;
     struct sockaddr_in addr;
     int r;
+    cip_context.loop = uv_default_loop();
+    
     uv_loop_t *loop = cip_context.loop;
-    loop = uv_default_loop();
     
     /* start xorg thread */
     uv_work_t req;
