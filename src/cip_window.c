@@ -137,7 +137,7 @@ int cip_window_stream_init(cip_window_t *window)
     param->i_csp = X264_CSP_I420;
     param->i_width = width;
     param->i_height = height;
-    param->i_slice_max_size = 149000;
+    param->i_slice_max_size = 14900000;
     
     param->b_vfr_input = 0;
     param->b_repeat_headers = 1;
